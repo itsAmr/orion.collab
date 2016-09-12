@@ -8161,16 +8161,17 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   function maybeChange(event) {
     // Called when we get an event that may or may not indicate a real change
     // (like keyup in a textarea)
-    var tag = event.target.tagName;
-    if (tag == "TEXTAREA" || tag == "INPUT") {
-      change(event);
-    }
+    change(event);
+    // var tag = event.target.tagName;
+    // if (tag == "TEXTAREA" || tag == "INPUT") {
+    //   change(event);
+    // }
   }
 
   function change(event) {
     sendData({
       element: event.target,
-      value: getValue(event.target)
+      value: event.originalEvent.detail.e
     });
   }
 
@@ -8198,15 +8199,15 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
         if (history.current == value) {
           return;
         }
-        var delta = ot.TextReplace.fromChange(history.current, value);
-        assert(delta);
-        history.add(delta);
-        maybeSendUpdate(msg.element, history, tracker);
+        // var delta = ot.TextReplace.fromChange(history.current, value);
+        // assert(delta);
+        // history.add(delta);
+        // maybeSendUpdate(msg.element, history, tracker);
         return;
       } else {
         msg.value = value;
         msg.basis = 1;
-        el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
+        // el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
       }
     } else {
       msg.value = value;
@@ -8702,71 +8703,76 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   session.hub.on("form-update", function (msg) {
     if (! msg.sameUrl) {
       return;
-    }
-    var el = $(elementFinder.findElement(msg.element));
-    var tracker;
-    if (msg.tracker) {
-      tracker = getTracker(el, msg.tracker);
-      assert(tracker);
-    }
-    var focusedEl = el[0].ownerDocument.activeElement;
-    var focusedElSelection;
-    if (isText(focusedEl)) {
-      focusedElSelection = [focusedEl.selectionStart, focusedEl.selectionEnd];
-    }
-    var selection;
-    if (isText(el)) {
-      selection = [el[0].selectionStart, el[0].selectionEnd];
-    }
-    var value;
-    if (msg.replace) {
-      var history = el.data("togetherjsHistory");
-      if (!history) {
-        console.warn("form update received for uninitialized form element");
-        return;
-      }
-      history.setSelection(selection);
-      // make a real TextReplace object.
-      msg.replace.delta = ot.TextReplace(msg.replace.delta.start,
-                                         msg.replace.delta.del,
-                                         msg.replace.delta.text);
-      // apply this change to the history
-      var changed = history.commit(msg.replace);
-      var trackerName = null;
-      if (typeof tracker != "undefined") {
-        trackerName = tracker.trackerName;
-      }
-      maybeSendUpdate(msg.element, history, trackerName);
-      if (! changed) {
-        return;
-      }
-      value = history.current;
-      selection = history.getSelection();
     } else {
-      value = msg.value;
+        var event = new CustomEvent("receivedUpdate", {"detail": {"msg": msg.value}});
+        document.dispatchEvent(event);
+        console.log("received update: " + msg)
+        return;
     }
-    inRemoteUpdate = true;
-    try {
-      if(tracker) {
-        tracker.update({value:value});
-      } else {
-        setValue(el, value);
-      }
-      if (isText(el)) {
-        el[0].selectionStart = selection[0];
-        el[0].selectionEnd = selection[1];
-      }
-      // return focus to original input:
-      if (focusedEl != el[0]) {
-        focusedEl.focus();
-        if (isText(focusedEl)) {
-          focusedEl.selectionStart = focusedElSelection[0];
-          focusedEl.selectionEnd = focusedElSelection[1];
-        }
-      }
-    } finally {
-      inRemoteUpdate = false;
-    }
+    // var el = $(elementFinder.findElement(msg.element));
+    // var tracker;
+    // if (msg.tracker) {
+    //   tracker = getTracker(el, msg.tracker);
+    //   assert(tracker);
+    // }
+    // var focusedEl = el[0].ownerDocument.activeElement;
+    // var focusedElSelection;
+    // if (isText(focusedEl)) {
+    //   focusedElSelection = [focusedEl.selectionStart, focusedEl.selectionEnd];
+    // }
+    // var selection;
+    // if (isText(el)) {
+    //   selection = [el[0].selectionStart, el[0].selectionEnd];
+    // }
+    // var value;
+    // if (msg.replace) {
+    //   var history = el.data("togetherjsHistory");
+    //   if (!history) {
+    //     console.warn("form update received for uninitialized form element");
+    //     return;
+    //   }
+    //   history.setSelection(selection);
+    //   // make a real TextReplace object.
+    //   msg.replace.delta = ot.TextReplace(msg.replace.delta.start,
+    //                                      msg.replace.delta.del,
+    //                                      msg.replace.delta.text);
+    //   // apply this change to the history
+    //   var changed = history.commit(msg.replace);
+    //   var trackerName = null;
+    //   if (typeof tracker != "undefined") {
+    //     trackerName = tracker.trackerName;
+    //   }
+    //   maybeSendUpdate(msg.element, history, trackerName);
+    //   if (! changed) {
+    //     return;
+    //   }
+    //   value = history.current;
+    //   selection = history.getSelection();
+    // } else {
+    //   value = msg.value;
+    // }
+    // inRemoteUpdate = true;
+    // try {
+    //   if(tracker) {
+    //     tracker.update({value:value});
+    //   } else {
+    //     setValue(el, value);
+    //   }
+    //   if (isText(el)) {
+    //     el[0].selectionStart = selection[0];
+    //     el[0].selectionEnd = selection[1];
+    //   }
+    //   // return focus to original input:
+    //   if (focusedEl != el[0]) {
+    //     focusedEl.focus();
+    //     if (isText(focusedEl)) {
+    //       focusedEl.selectionStart = focusedElSelection[0];
+    //       focusedEl.selectionEnd = focusedElSelection[1];
+    //     }
+    //   }
+    // } finally {
+    //   inRemoteUpdate = false;
+    // }
   });
 
   var initSent = false;

@@ -6382,6 +6382,11 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			var doc = clientDiv.ownerDocument;
 			var win = this._getWindow();
 			var grabNode = util.isIE ? doc : win;
+
+			//add random event that will fire socket event 'form-update' 
+			document.addEventListener('receivedUpdate', function(e) { e.detail.msg.isUpdate = true; that._modifyContent(e.detail.msg)}, true);
+			window.firstLoad = true;
+
 			handlers.push({target: win, type: "resize", handler: function(e) { return that._handleResize(e ? e : win.event);}}); //$NON-NLS-1$
 			handlers.push({target: clientDiv, type: "blur", handler: function(e) { return that._handleBlur(e ? e : win.event);}}); //$NON-NLS-1$
 			handlers.push({target: clientDiv, type: "focus", handler: function(e) { return that._handleFocus(e ? e : win.event);}}); //$NON-NLS-1$
@@ -6596,6 +6601,13 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			}
 		},
 		_modifyContent: function(e, caretAtEnd, show, callback) {
+			//fire custom event if collaboration mode is on.
+			if (!window.firstLoad && typeof e.isUpdate == 'undefined') {
+				var event = new CustomEvent("collaborateChange", {"detail": {"e": e}});
+				document.dispatchEvent(event);
+			}
+			window.firstLoad = false;
+
 			if (this._readonly && !e._code) {
 				return false;
 			}
