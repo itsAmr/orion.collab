@@ -10,6 +10,7 @@
 		<script src="../requirejs/require.js"></script>
 		<script>
 			/*eslint-env browser, amd*/
+			/*globals TogetherJS */
 			require(["../orion/require-config.js"], function(config){
 				function load() {
 					require(["edit/edit"], null, config.errback);
@@ -21,13 +22,19 @@
 					require(["orion/splash"], load, load);
 				}
 			});
+			require(["build/togetherjs-min.js"], function (){
+				TogetherJS.config("TogetherJSConfig_includeHashInUrl", true);
+				TogetherJS.config("TogetherJSConfig_cloneClicks", true);
+//				var TogetherJSConfig_cloneClicks = true;
+//				TogetherJS(this);
+			});
 		</script>
 	</head>
 
 	<body id="orion-editor" spellcheck="false" class="orionPage">
 		<!-- file input doesn't function properly on all web browsers if it is dynamically generated, we don't want the input to be visible -->
 		<input id="fileSelectorInput" type="file" multiple style="position:fixed; top: -100px;"/>
-		<nav id="sideMenu" class="sideMenu"></nav>
+		<nav id="sideMenu" class="sideMenu"><input type="text"/></nav>
 		<div id="pageContent" class="content-fixedHeight">
 			<div id="sideMenuToggle" class="sideMenuToggle"></div>
 			<div id="pageToolbar" class="mainToolbar toolComposite toolbarLayout"></div>
@@ -43,7 +50,7 @@
 					<div class="fixedToolbarHolder">
 						<div id="editor" class="workingTarget"></div>
 						<div id="replaceCompareTitleDiv" class="replaceCompareTitleDiv"></div>
-						<div id="replaceCompareDiv" class="replaceCompareDiv workingTarget"></div>
+						<div id="replaceCompareDiv"`	 class="replaceCompareDiv workingTarget"></div>
 					</div>
 				</div>
 			</div>
