@@ -17,6 +17,7 @@ var nodePath = require('path');
 var api = require('./api');
 var fileUtil = require('./fileUtil');
 var writeError = api.writeError;
+var Promise = require('bluebird');
 
 function getParam(req, paramName) {
 	return req.query[paramName];
@@ -163,18 +164,14 @@ module.exports = function(options) {
 	 * Create local file structure of received URL to be synced.
 	*/
 	router.get('*', jsonParser, function(req, res) {
-		//create the subdirectory with ".tmp" + req.params["0"] (for now without temp)
 		//then establish the websocket connection and request initial content. (togetherjs)
 		//receive initial content - write content - start listening to changes. (togetherjs)
 		console.log(req.params);
-
-		var rest = req.params["0"].substring(1);
-		var filepath = getSafeFilePath(req, rest);
-		var diffPatch = req.headers['x-http-method-override'];
-		if (diffPatch === "PATCH") {
-			handleDiff(req, res, rest, req.body);
-			return;
-		}
+		var collabParams = req.params["0"];
+		var extraParamsIndex = collabParams.indexOf(req.collabSessionID);
+		var rest = collabParams.substring(1, extraParamsIndex !== -1 ? extraParamsIndex : collabParams.length);
+		var collabSessionID = req.collabSessionID;
+		// var filepath = getSafeFilePath(req, rest);
 
 		var structure = rest.split("/");
 		console.log(structure);
@@ -201,23 +198,14 @@ module.exports = function(options) {
 			fileUtil.handleFilePOST(fileRoot, req, res, filepath);
 		});
 
-		// fileUtil.withStatsAndETag(filepath, function(error, stats, etag) {
-		// 	if (error && error.code === 'ENOENT') {
-		// 		if(typeof readIfExists === 'boolean' && readIfExists) {
-		// 			res.sendStatus(204);
-		// 		} else {
-		// 			writeError(404, res, 'File not found: ' + rest);
-		// 		}
-		// 	} else if (error) {
-		// 		writeError(500, res, error);
-		// 	} else if (stats.isFile() && getParam(req, 'parts') !== 'meta') {
-		// 		// GET file contents
-		// 		writeFileContents(res, filepath, stats, etag);
-		// 	} else {
-		// 		var depth = stats.isDirectory() && Number(getParam(req, 'depth')) || 0;
-		// 		writeFileMetadata(req, res, filepath, stats, etag, depth);
-		// 	}
-		// });
+		//redirect to the file with or without collaboration
+		//needs to be implemented as a promise so to make sure that the file creation operation is complete
+		if (typeof collabSessionID === 'undefined') {
+			res.redirect("/edit/edit.html#/file/" + rest);
+		} else {
+			res.redirect("/edit/edit.html#/file/" + rest + req.collabSessionID);
+		}
+
 		console.log(filepath);
 		// res.send("URL: " + req.params['0']);
 	});
