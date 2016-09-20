@@ -45,6 +45,18 @@ function startServer(options) {
 			}
 		}
 
+		function validateCollab(req, res, next) {
+			//make sure you got all the info you need to create the temp files and establish the session.
+			console.log("Validating Collab");
+			console.log(req.params['0']);
+			if (req.params["0"].length === 0) {
+				res.writeHead(400, "Bad request");
+				res.end();
+			} else {
+				next();
+			}
+		}
+
 		// API handlers
 		if (options.configParams["orion.single.user"]) {
 			app.use(/* @callback */ function(req, res, next){
@@ -60,6 +72,8 @@ function startServer(options) {
 		} else {
 			app.use(require('./lib/user')(options));
 		}
+
+		app.use('/scratchpad*', checkAuthenticated, validateCollab, require('./lib/scratchpad')({root: '/file', options: options}));
 		app.use('/site', checkAuthenticated, require('./lib/sites')(options));
 		app.use('/task', checkAuthenticated, require('./lib/tasks').router({ root: '/task' }));
 		app.use('/filesearch', checkAuthenticated, require('./lib/search')(options));
