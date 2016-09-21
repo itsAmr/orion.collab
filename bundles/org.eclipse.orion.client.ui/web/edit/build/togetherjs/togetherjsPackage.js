@@ -1786,8 +1786,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     }
     hash = hash.replace(/&?togetherjs-[a-zA-Z0-9]+/, "");
     hash = hash || "#";
-    return location.protocol + "//" + location.host + location.pathname + query +
-           hash + "&togetherjs=" + session.shareId;
+    return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId;
   };
 
   session.recordUrl = function () {
@@ -8199,15 +8198,15 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
         if (history.current == value) {
           return;
         }
-        // var delta = ot.TextReplace.fromChange(history.current, value);
-        // assert(delta);
-        // history.add(delta);
-        // maybeSendUpdate(msg.element, history, tracker);
+        var delta = ot.TextReplace.fromChange(history.current, value);
+        assert(delta);
+        history.add(delta);
+        maybeSendUpdate(msg.element, history, tracker);
         return;
       } else {
         msg.value = value;
         msg.basis = 1;
-        // el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
+        el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
       }
     } else {
       msg.value = value;
