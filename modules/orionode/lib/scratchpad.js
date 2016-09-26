@@ -170,10 +170,12 @@ module.exports = function(options) {
 		var collabParams = req.params["0"];
 		var extraParamsIndex = collabParams.indexOf(req.collabSessionID);
 		var rest = collabParams.substring(1, extraParamsIndex !== -1 ? extraParamsIndex : collabParams.length);
+		rest = ".scratch" + Date.now() + "/" + rest;
 		var collabSessionID = req.collabSessionID;
-		// var filepath = getSafeFilePath(req, rest);
+		var filepath = getSafeFilePath(req, rest);
 
 		var structure = rest.split("/");
+		// structure.unshift(".scratch" + Date.now());
 		console.log(structure);
 
 		debugger;
@@ -214,6 +216,13 @@ module.exports = function(options) {
 	router.delete('*', function(req, res) {
 		var rest = req.params["0"].substring(1);
 		var filepath = getSafeFilePath(req, rest);
+
+		var structure = rest.split("/");
+		console.log(structure);
+
+		filepath = getSafeFilePath(req, "/" + structure[0]);
+		console.log(filepath);
+
 		fileUtil.withStatsAndETag(filepath, function(error, stats, etag) {
 			var ifMatchHeader = req.headers['if-match'];
 			if (error && error.code === 'ENOENT') {

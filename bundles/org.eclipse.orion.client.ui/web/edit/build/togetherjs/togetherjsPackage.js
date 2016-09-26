@@ -1796,12 +1796,40 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     return url;
   };
 
-  /* location.href without the hash */
   session.currentUrl = function () {
     if (includeHashInUrl) {
-      return location.href;
+        if (session.isClient) {
+            if (location.href == TogetherJS.config.get("sessionFileUrl")) {
+                var re = /\/\.scratch.([^/]+)/;
+                return (location.href.replace(re, ''));
+            }
+            else {
+                return " ";
+            }
+        }
+        else {
+            return location.href;
+        }
     } else {
       return location.href.replace(/#.*/, "");
+    }
+  };
+
+  session.creatorHasLeft = function() {
+    session.close();
+  };
+
+  session.deleteTempFiles = function(filepath) {
+    //delete local files
+    if (confirm("Do you want to delete the collaboration file from your workspace?")) {
+        var file = TogetherJS.config.get("sessionFileUrl").split("#/file/").pop();
+        $.ajax({
+            url: '/scratchpad/' + file,
+            type: 'DELETE',
+            success: function(result) {
+                location.href = '/';
+            }
+        });
     }
   };
 
@@ -1854,7 +1882,14 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
         msg.peer.updateFromHello(msg);
       }
       if (msg.peer) {
-        msg.sameUrl = msg.peer.url == currentUrl;
+        //here I need to check if creator navigated away from the page.
+        //this needs to be done on creators side and not here, 
+        //if navigate away close the session, 
+        //which would then notify everyone that the creator has left.
+        // if (msg.peer.isCreator && msg.peer.url != currentUrl) {
+        //   session.creatorHasLeft();
+        // }
+        msg.sameUrl = msg.peer.url == session.currentUrl();
         if (!msg.peer.isSelf) {
           msg.peer.updateMessageDate(msg);
         }
@@ -1912,7 +1947,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
         url += msg.urlHash;
       }
       require("ui").showUrlChangeMessage(msg.peer, url);
-      location.href = url;
+      // location.href = url;
     }
   }
 
@@ -1960,7 +1995,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
   // be injected at runtime because they aren't pulled in naturally
   // via define().
   // ui must be the first item:
-  var features = ["peers", "ui", "chat", "webrtc", "cursor", "startup", "videos", "forms", "visibilityApi", "youtubeVideos"];
+  var features = ["peers", "ui", "chat", "webrtc", /*"cursor",*/ "startup", "videos", "forms", "visibilityApi", "youtubeVideos"];
 
   function getRoomName(prefix, maxSize) {
     var findRoom = TogetherJS.config.get("hubBase").replace(/\/*$/, "") + "/findroom";
@@ -2107,6 +2142,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     });
   }
   session.start = function () {
+    TogetherJS.config("sessionFileUrl", location.href);
     initStartTarget();
     initIdentityId().then(function () {
       initShareId().then(function () {
@@ -2144,6 +2180,9 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
 
   session.close = function (reason) {
     TogetherJS.running = false;
+    if (session.isClient) {
+        session.deleteTempFiles();
+    }
     var msg = {type: "bye"};
     if (reason) {
       msg.reason = reason;
@@ -2395,9 +2434,9 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
       }
       // FIXME: I can't decide if this is the only time we need to emit
       // this message (and not .update() or other methods)
-      if (this.following) {
-        session.emit("follow-peer", this);
-      }
+      // if (this.following) {
+      //   session.emit("follow-peer", this);
+      // }
     },
 
     update: function (attrs) {
@@ -2467,15 +2506,15 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
 
   // FIXME: I can't decide where this should actually go, seems weird
   // that it is emitted and handled in the same module
-  session.on("follow-peer", function (peer) {
-    if (peer.url != session.currentUrl()) {
-      var url = peer.url;
-      if (peer.urlHash) {
-        url += peer.urlHash;
-      }
-      location.href = url;
-    }
-  });
+  // session.on("follow-peer", function (peer) {
+  //   if (peer.url != session.currentUrl()) {
+  //     var url = peer.url;
+  //     if (peer.urlHash) {
+  //       url += peer.urlHash;
+  //     }
+  //     location.href = url;
+  //   }
+  // });
 
   Peer.peers = {};
 
@@ -2613,12 +2652,6 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
           } else {
             name = getUserName();
           }
-          if (name && typeof name != "string") {
-            // FIXME: test for HTML safe?  Not that we require it, but
-            // <>'s are probably a sign something is wrong.
-            console.warn("Error in getUserName(): should return a string (got", name, ")");
-            name = null;
-          }
         }
         if (getUserColor) {
           if (typeof getUserColor == "string") {
@@ -2644,11 +2677,23 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
           }
         }
         if (name || color || avatar) {
-          this.update({
-            name: name,
-            color: color,
-            avatar: avatar
-          });
+            var self = this;
+            name.then(
+                function(username) {
+                    self.update({
+                        name: username,
+                        color: color,
+                        avatar: avatar
+                    });
+                },
+                function() {
+                    self.update({
+                        name: null,
+                        color: color,
+                        avatar: avatar
+                    });  
+                }
+            );
         }
       }
     });
@@ -2754,6 +2799,10 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
   session.hub.on("bye", function (msg) {
     var peer = peers.getPeer(msg.clientId);
     peer.bye();
+
+    if(peer.isCreator) {
+        session.creatorHasLeft();
+    }
   });
 
   var checkActivityTask = null;
@@ -5319,13 +5368,13 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         attrs.peer.nudge();
         return false;
       });
-      el.find(".togetherjs-follow").click(function () {
-        var url = attrs.peer.url;
-        if (attrs.peer.urlHash) {
-          url += attrs.peer.urlHash;
-        }
-        location.href = url;
-      });
+      // el.find(".togetherjs-follow").click(function () {
+      //   var url = attrs.peer.url;
+      //   if (attrs.peer.urlHash) {
+      //     url += attrs.peer.urlHash;
+      //   }
+      //   location.href = url;
+      // });
       var notify = ! attrs.sameUrl;
       if (attrs.sameUrl && ! $("#" + realId).length) {
         // Don't bother showing a same-url notification, if no previous notification
@@ -5561,7 +5610,9 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         return;
       }
       this._lastUpdateUrlDisplay = url;
+
       var sameUrl = url == session.currentUrl();
+
       ui.chat.urlChange({
         peer: this.peer,
         url: this.peer.url,
@@ -5630,9 +5681,9 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
       var followId = this.peer.className("togetherjs-person-status-follow-");
       this.detailElement.find('[for="togetherjs-person-status-follow"]').attr("for", followId);
       this.detailElement.find('#togetherjs-person-status-follow').attr("id", followId);
-      this.detailElement.find(".togetherjs-follow").click(function () {
-        location.href = $(this).attr("href");
-      });
+      // this.detailElement.find(".togetherjs-follow").click(function () {
+      //   location.href = $(this).attr("href");
+      // });
       this.detailElement.find(".togetherjs-nudge").click((function () {
         this.peer.nudge();
       }).bind(this));
@@ -5700,15 +5751,15 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
       if (! this.detailElement) {
         return;
       }
-      var same = this.detailElement.find(".togetherjs-same-url");
-      var different = this.detailElement.find(".togetherjs-different-url");
-      if (this.peer.url == session.currentUrl()) {
-        same.show();
-        different.hide();
-      } else {
-        same.hide();
-        different.show();
-      }
+      // var same = this.detailElement.find(".togetherjs-same-url");
+      // var different = this.detailElement.find(".togetherjs-different-url");
+      // if (this.peer.url == session.currentUrl()) {
+      //   same.show();
+      //   different.hide();
+      // } else {
+      //   same.hide();
+      //   different.show();
+      // }
     },
 
     maybeHideDetailWindow: function (windows) {
@@ -7195,21 +7246,21 @@ define('cursor',["jquery", "ui", "util", "session", "elementFinder", "tinycolor"
   });
 
   session.on("ui-ready", function () {
-    $(document).mousemove(mousemove);
-    document.addEventListener("click", documentClick, true);
-    document.addEventListener("keydown", documentKeydown, true);
-    $(window).scroll(scroll);
-    scroll();
+    // $(document).mousemove(mousemove);
+    // document.addEventListener("click", documentClick, true);
+    // document.addEventListener("keydown", documentKeydown, true);
+    // $(window).scroll(scroll);
+    // scroll();
   });
 
   session.on("close", function () {
     Cursor.forEach(function (c, clientId) {
       Cursor.destroy(clientId);
     });
-    $(document).unbind("mousemove", mousemove);
-    document.removeEventListener("click", documentClick, true);
-    document.removeEventListener("keydown", documentKeydown, true);
-    $(window).unbind("scroll", scroll);
+    // $(document).unbind("mousemove", mousemove);
+    // document.removeEventListener("click", documentClick, true);
+    // document.removeEventListener("keydown", documentKeydown, true);
+    // $(window).unbind("scroll", scroll);
   });
 
   session.hub.on("hello", function (msg) {
@@ -8167,6 +8218,26 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     // }
   }
 
+  function sendInitContent(event) {
+    if (!session.isClient) {
+        var message = {
+            type: "init-content",
+            value: {
+                text: event.originalEvent.detail.e.text
+            }
+        }
+        session.send(message);
+    }
+  }
+
+  function requestInitContent() {
+    var msg = {
+        type: "request-init-content",
+        element: location
+    };
+    session.send(msg);
+  }
+
   function change(event) {
     sendData({
       element: event.target,
@@ -8699,6 +8770,28 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     session.send(msg);
   }
 
+    session.hub.on("request-init-content", function (msg) {
+        console.log("initcontent requested!!!");
+        if (! msg.sameUrl) {
+          return;
+        } else {
+            var event = new CustomEvent("getInitContent", {"detail": {"msg": msg}});
+            document.dispatchEvent(event);
+        }
+    });
+
+    session.hub.on("init-content", function (msg) {
+        console.log("initcontent received!!!");
+        if (! msg.sameUrl) {
+           return;
+        } else {
+            var event = new CustomEvent("setInitContent", {"detail" : {"msg": msg.value.text}});
+            document.dispatchEvent(event);
+            console.log("received init content: " + msg)
+            return;
+        }
+    });
+
   session.hub.on("form-update", function (msg) {
     if (! msg.sameUrl) {
       return;
@@ -8960,21 +9053,27 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   }
 
   session.on("ui-ready", function () {
-    $(document).on("change", change);
+    // $(document).on("change", change);
     // note that textInput, keydown, and keypress aren't appropriate events
     // to watch, since they fire *before* the element's value changes.
     // $(document).on("input keyup cut paste", maybeChange);
-    $(document).on("focusin", focus);
-    $(document).on("focusout", blur);
+    // $(document).on("focusin", focus);
+    // $(document).on("focusout", blur);
     $(document).on("collaborateChange", maybeChange);
+    $(document).on("sendInitContent", sendInitContent);
+    $(document).on("readyToGetContent", requestInitContent);
+    $(window).on("beforeunload", session.close);
   });
 
   session.on("close", function () {
-    $(document).off("change", change);
+    // $(document).off("change", change);
     // $(document).off("input keyup cut paste", maybeChange);
-    $(document).off("focusin", focus);
-    $(document).off("focusout", blur);
-    $(document).off("collaborateChange", maybeChange);
+    // $(document).off("focusin", focus);
+    // $(document).off("focusout", blur);
+    // $(document).off("collaborateChange", maybeChange);
+    $(document).off("sendInitContent", sendInitContent);
+    $(document).off("readyToGetContent", requestInitContent);
+    $(window).off("beforeunload", session.close);
   });
 
   session.hub.on("hello", function (msg) {

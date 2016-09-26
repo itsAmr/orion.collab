@@ -10,7 +10,7 @@
 		<script src="../requirejs/require.js"></script>
 		<script>
 			/*eslint-env browser, amd*/
-			/*globals TogetherJS */
+			/* globals TogetherJS */
 			require(["../orion/require-config.js"], function(config){
 				function load() {
 					require(["edit/edit"], null, config.errback);
@@ -23,10 +23,30 @@
 				}
 			});
 			require(["build/togetherjs-min.js"], function (){
-				TogetherJS.config("TogetherJSConfig_includeHashInUrl", true);
-				TogetherJS.config("TogetherJSConfig_cloneClicks", true);
-//				var TogetherJSConfig_cloneClicks = true;
-//				TogetherJS(this);
+			 	TogetherJS.config("includeHashInUrl", true);
+				TogetherJS.config("dontShowClicks", true);
+				TogetherJS.config("ignoreMessages", ["cursor-update", "scroll-update", "keydown", "form-focus"]);
+				TogetherJS.config("suppressJoinConfirmation", true);
+				TogetherJS.config("toolName", "Orion Collab Mode");
+				TogetherJS.config("siteName", "Orion");
+				TogetherJS.config("getUserName", 
+					function() {
+						return new Promise(
+							function(resolve, reject) {
+						        $.ajax({
+						            url: '/login',
+						            type: 'POST',
+						            success: function(result) {
+						                resolve(result.UserName);
+						            },
+						            fail: function(result) {
+						            	reject();
+						            }
+						        });
+						    }
+					    );
+					}
+				);
 			});
 		</script>
 	</head>
@@ -34,7 +54,7 @@
 	<body id="orion-editor" spellcheck="false" class="orionPage">
 		<!-- file input doesn't function properly on all web browsers if it is dynamically generated, we don't want the input to be visible -->
 		<input id="fileSelectorInput" type="file" multiple style="position:fixed; top: -100px;"/>
-		<nav id="sideMenu" class="sideMenu"><input type="text"/></nav>
+		<nav id="sideMenu" class="sideMenu"></nav>
 		<div id="pageContent" class="content-fixedHeight">
 			<div id="sideMenuToggle" class="sideMenuToggle"></div>
 			<div id="pageToolbar" class="mainToolbar toolComposite toolbarLayout"></div>

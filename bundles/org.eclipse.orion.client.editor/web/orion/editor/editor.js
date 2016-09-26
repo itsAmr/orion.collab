@@ -1330,6 +1330,8 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 				this._textView.setText(contents);
 				this._textView.getModel().setLineDelimiter("auto"); //$NON-NLS-0$
 				this._highlightCurrentLine(this._textView.getSelections());
+				var event = new CustomEvent("readyToGetContent", {"detail": {"e": contents}});
+				document.dispatchEvent(event);
 			}
 		},
 		

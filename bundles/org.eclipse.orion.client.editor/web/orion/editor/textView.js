@@ -6386,6 +6386,15 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			//add random event that will fire socket event 'form-update' 
 			document.addEventListener('receivedUpdate', function(e) { e.detail.msg.isUpdate = true; that._modifyContent(e.detail.msg)}, true);
 			window.firstLoad = true;
+			document.addEventListener('getInitContent', function(e) { 
+				var txt = that.getText();
+				var event = new CustomEvent("sendInitContent", {"detail": {"e": {text: txt}}});
+				document.dispatchEvent(event);
+			}, true);
+			document.addEventListener('setInitContent', function(e) { 
+				window.firstLoad = true;
+				that.setText(e.detail.msg);
+			}, true);
 
 			handlers.push({target: win, type: "resize", handler: function(e) { return that._handleResize(e ? e : win.event);}}); //$NON-NLS-1$
 			handlers.push({target: clientDiv, type: "blur", handler: function(e) { return that._handleBlur(e ? e : win.event);}}); //$NON-NLS-1$
