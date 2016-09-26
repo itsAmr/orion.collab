@@ -1821,7 +1821,8 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
 
   session.deleteTempFiles = function(filepath) {
     //delete local files
-    if (confirm("Do you want to delete the collaboration file from your workspace?")) {
+    if (confirm("Session terminated. Do you want to delete the collaboration file from your workspace?")) {
+        storage.tab.storage.lastFile =  "";
         var file = TogetherJS.config.get("sessionFileUrl").split("#/file/").pop();
         $.ajax({
             url: '/scratchpad/' + file,

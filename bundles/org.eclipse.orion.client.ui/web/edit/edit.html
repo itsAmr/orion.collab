@@ -31,20 +31,18 @@
 				TogetherJS.config("siteName", "Orion");
 				TogetherJS.config("getUserName", 
 					function() {
-						return new Promise(
-							function(resolve, reject) {
-						        $.ajax({
-						            url: '/login',
-						            type: 'POST',
-						            success: function(result) {
-						                resolve(result.UserName);
-						            },
-						            fail: function(result) {
-						            	reject();
-						            }
-						        });
-						    }
-					    );
+						return new Promise(function(resolve, reject) {
+							$.ajax({
+								url: '/login',
+								type: 'POST',
+								success: function(result) {
+									resolve(result.UserName);
+								},
+								fail: function() {
+									reject();
+								}
+							});
+						});
 					}
 				);
 			});

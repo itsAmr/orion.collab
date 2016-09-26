@@ -12,12 +12,12 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var ETag = require('./util/etag');
-var fs = require('fs');
 var nodePath = require('path');
 var api = require('./api');
 var fileUtil = require('./fileUtil');
 var writeError = api.writeError;
 var Promise = require('bluebird');
+var fs = Promise.promisifyAll(require('fs'));
 
 function getParam(req, paramName) {
 	return req.query[paramName];
@@ -157,6 +157,17 @@ module.exports = function(options) {
 		});
 	}
 
+	function makeFile(fileRoot, req, res, destFilepath) {
+		var isDirectory = req.body && getBoolean(req.body, 'Directory');
+
+		// Just a regular file write
+		return Promise.resolve()
+		.then(function() {
+			return isDirectory ? fs.mkdirSync(destFilepath) : fs.writeFileSync(destFilepath, '');
+		});
+		// .catch(api.writeError.bind(null, 500, res));
+	}
+
 	var router = express.Router({mergeParams: true});
 	var jsonParser = bodyParser.json();
 
@@ -164,9 +175,6 @@ module.exports = function(options) {
 	 * Create local file structure of received URL to be synced.
 	*/
 	router.get('*', jsonParser, function(req, res) {
-		//then establish the websocket connection and request initial content. (togetherjs)
-		//receive initial content - write content - start listening to changes. (togetherjs)
-		console.log(req.params);
 		var collabParams = req.params["0"];
 		var extraParamsIndex = collabParams.indexOf(req.collabSessionID);
 		var rest = collabParams.substring(1, extraParamsIndex !== -1 ? extraParamsIndex : collabParams.length);
@@ -176,40 +184,25 @@ module.exports = function(options) {
 
 		var structure = rest.split("/");
 		// structure.unshift(".scratch" + Date.now());
-		console.log(structure);
 
 		debugger;
 
-		// filepath = getSafeFilePath(req, "/" + structure[0]);
-		// console.log(fileRoot);
-		// req.body = { 
-		// 	Name: "value", 
-		// 	LocalTimeStamp: '0', 
-		// 	Directory: false
-		// };
-		// fileUtil.handleFilePOST(fileRoot, req, res, filepath);
-
-		structure.map(function(value, index) {
-			debugger;
+		Promise.map(structure, function(value, index) {
 			filepath = getSafeFilePath(req, "/" + structure.slice(0, index+1).join('/'));
 			req.body = { 
 				Name: value, 
 				LocalTimeStamp: '0', 
 				Directory: ((index === (structure.length-1)) ? false : true)
 			};
-			fileUtil.handleFilePOST(fileRoot, req, res, filepath);
+			return makeFile(fileRoot, req, res, filepath);
+		}).then(function() {
+			//redirect to the file with or without collaboration
+			if (typeof collabSessionID === 'undefined') {
+				res.redirect("/edit/edit.html#/file/" + rest);
+			} else {
+				res.redirect("/edit/edit.html#/file/" + rest + req.collabSessionID);
+			}
 		});
-
-		//redirect to the file with or without collaboration
-		//needs to be implemented as a promise so to make sure that the file creation operation is complete
-		if (typeof collabSessionID === 'undefined') {
-			res.redirect("/edit/edit.html#/file/" + rest);
-		} else {
-			res.redirect("/edit/edit.html#/file/" + rest + req.collabSessionID);
-		}
-
-		console.log(filepath);
-		// res.send("URL: " + req.params['0']);
 	});
 
 	// DELETE - no request body
@@ -218,10 +211,8 @@ module.exports = function(options) {
 		var filepath = getSafeFilePath(req, rest);
 
 		var structure = rest.split("/");
-		console.log(structure);
 
 		filepath = getSafeFilePath(req, "/" + structure[0]);
-		console.log(filepath);
 
 		fileUtil.withStatsAndETag(filepath, function(error, stats, etag) {
 			var ifMatchHeader = req.headers['if-match'];
