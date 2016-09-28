@@ -8223,6 +8223,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     if (!session.isClient) {
         var message = {
             type: "init-content",
+            requestorID: event.originalEvent.detail.e.requestorID,
             value: {
                 text: event.originalEvent.detail.e.text
             }
@@ -8783,7 +8784,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
 
     session.hub.on("init-content", function (msg) {
         console.log("initcontent received!!!");
-        if (! msg.sameUrl) {
+        if (! msg.sameUrl || msg.requestorID !== session.clientId) {
            return;
         } else {
             var event = new CustomEvent("setInitContent", {"detail" : {"msg": msg.value.text}});

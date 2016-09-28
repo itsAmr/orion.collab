@@ -6388,7 +6388,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			window.firstLoad = true;
 			document.addEventListener('getInitContent', function(e) { 
 				var txt = that.getText();
-				var event = new CustomEvent("sendInitContent", {"detail": {"e": {text: txt}}});
+				var event = new CustomEvent("sendInitContent", {"detail": {"e": {text: txt, requestorID: e.detail.msg.peer.id}}});
 				document.dispatchEvent(event);
 			}, true);
 			document.addEventListener('setInitContent', function(e) { 
