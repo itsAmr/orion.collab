@@ -47,9 +47,6 @@ function startServer(options) {
 
 		function validateCollab(req, res, next) {
 			//make sure you got all the info you need to create the temp files and establish the session.
-			debugger;
-			console.log("Validating Collab");
-
 			var collabParams = req.params["0"];
 			var extraParamsIndex = collabParams.indexOf('&');
 			var collabSessionID = collabParams.substring(extraParamsIndex != -1 ? extraParamsIndex : collabParams.length, collabParams.length);
