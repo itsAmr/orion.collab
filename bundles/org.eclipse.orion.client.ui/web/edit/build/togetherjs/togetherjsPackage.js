@@ -5613,13 +5613,6 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
       this._lastUpdateUrlDisplay = url;
 
       var sameUrl = url == session.currentUrl();
-
-      ui.chat.urlChange({
-        peer: this.peer,
-        url: this.peer.url,
-        title: this.peer.title,
-        sameUrl: sameUrl
-      });
     },
 
     urlNudge: function () {

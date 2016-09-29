@@ -714,6 +714,8 @@ define([
 						evt.session.apply();
 					}
 				}
+				var event = new CustomEvent("readyToGetContent", {"detail": {"e": "contents"}});
+				document.dispatchEvent(event);
 			}
 
 			this._saveEventLogged = false;
