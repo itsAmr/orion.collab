@@ -2037,6 +2037,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
       var isClient = true;
       var set = true;
       var sessionId;
+      var reason = TogetherJS.startup.reason;
       session.firstRun = ! TogetherJS.startup.continued;
       if (! shareId) {
         if (TogetherJS.startup._joinShareId) {
@@ -2087,23 +2088,23 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
           });
           return;
         } else if (TogetherJS.startup._launch) {
-          if (saved) {
-            isClient = saved.reason == "joined";
-            if (! shareId) {
-              shareId = saved.shareId;
+            if (saved && saved.running == true) {
+                isClient = saved.reason == "joined";
+                reason = saved.reason;
+                sessionId = saved.sessionId
+                shareId = saved.shareId;
+            } else {
+                isClient = TogetherJS.startup.reason == "joined";
             }
-            sessionId = saved.sessionId;
-          } else {
-            isClient = TogetherJS.startup.reason == "joined";
-            assert(! sessionId);
-            sessionId = util.generateId();
-          }
-          if (! shareId) {
-            shareId = util.generateId();
-          }
+            if (! sessionId) {
+                sessionId = util.generateId();
+            }
+            if (! shareId) {
+               shareId = util.generateId();
+            }
         } else if (saved) {
           isClient = saved.reason == "joined";
-          TogetherJS.startup.reason = saved.reason;
+          reason = saved.reason;
           TogetherJS.startup.continued = true;
           shareId = saved.shareId;
           sessionId = saved.sessionId;
@@ -2116,7 +2117,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
         assert(session.identityId);
         session.clientId = session.identityId + "." + sessionId;
         if (set) {
-          storage.tab.set("status", {reason: TogetherJS.startup.reason, shareId: shareId, running: true, date: Date.now(), sessionId: sessionId});
+          storage.tab.set("status", {reason: reason, shareId: shareId, running: true, date: Date.now(), sessionId: sessionId});
         }
         session.isClient = isClient;
         session.shareId = shareId;
