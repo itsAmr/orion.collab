@@ -6640,7 +6640,13 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			} else {
 				if (e.selection.length > 1) this._startUndo();
 			}
-			
+
+			if (e.isUpdate) {
+				e.selection.map(function(tempSelection, index) {
+					e.selection[index] = new Selection(tempSelection.start, tempSelection.end, tempSelection.start > tempSelection.end);
+				});
+			}
+
 			var model = this._model;
 			try {
 				if (e._ignoreDOMSelection) { this._ignoreDOMSelection = true; }
@@ -6657,8 +6663,12 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			} finally {
 				if (e._ignoreDOMSelection) { this._ignoreDOMSelection = false; }
 			}
-			this._setSelection(e.selection, show, true, callback);
-			
+			if (!e.isUpdate) {
+				this._setSelection(e.selection, show, true, callback);
+			} else if (e.isUpdate) {
+				//here we can update the selections of other users in the document
+			}
+
 			undo = this._compoundChange;
 			if (undo) undo.owner.selection = e.selection;
 			
