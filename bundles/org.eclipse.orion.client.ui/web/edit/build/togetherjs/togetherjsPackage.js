@@ -2088,6 +2088,8 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
           });
           return;
         } else if (TogetherJS.startup._launch) {
+            //starting the session
+            //here we deal with reopened or refreshed tabs
             if (saved && saved.running == true) {
                 isClient = saved.reason == "joined";
                 reason = saved.reason;
@@ -2801,10 +2803,10 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
   session.hub.on("bye", function (msg) {
     var peer = peers.getPeer(msg.clientId);
     peer.bye();
+  });
 
-    if(peer.isCreator) {
-        session.creatorHasLeft();
-    }
+  session.hub.on("close_yourself", function (msg) {
+    session.creatorHasLeft();
   });
 
   var checkActivityTask = null;
