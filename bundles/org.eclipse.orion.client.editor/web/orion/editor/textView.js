@@ -6611,7 +6611,9 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 		},
 		_modifyContent: function(e, caretAtEnd, show, callback) {
 			//fire custom event if collaboration mode is on.
-			if (!window.firstLoad && typeof e.isUpdate == 'undefined') {
+			var isCollabUpdate = Object.prototype.hasOwnProperty.call(e, 'isUpdate') && e.isUpdate;
+
+			if (!window.firstLoad && !isCollabUpdate) {
 				var event = new CustomEvent("collaborateChange", {"detail": {"e": e}});
 				document.dispatchEvent(event);
 			}
@@ -6641,7 +6643,7 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 				if (e.selection.length > 1) this._startUndo();
 			}
 
-			if (e.isUpdate) {
+			if (isCollabUpdate) {
 				e.selection.map(function(tempSelection, index) {
 					e.selection[index] = new Selection(tempSelection.start, tempSelection.end, tempSelection.start > tempSelection.end);
 				});
@@ -6663,9 +6665,9 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			} finally {
 				if (e._ignoreDOMSelection) { this._ignoreDOMSelection = false; }
 			}
-			if (!e.isUpdate) {
+			if (!isCollabUpdate) {
 				this._setSelection(e.selection, show, true, callback);
-			} else if (e.isUpdate) {
+			} else if (isCollabUpdate) {
 				//here we can update the selections of other users in the document
 			}
 

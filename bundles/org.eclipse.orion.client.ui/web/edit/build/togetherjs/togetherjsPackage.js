@@ -1886,13 +1886,6 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
         msg.peer.updateFromHello(msg);
       }
       if (msg.peer) {
-        //here I need to check if creator navigated away from the page.
-        //this needs to be done on creators side and not here, 
-        //if navigate away close the session, 
-        //which would then notify everyone that the creator has left.
-        // if (msg.peer.isCreator && msg.peer.url != currentUrl) {
-        //   session.creatorHasLeft();
-        // }
         msg.sameUrl = msg.peer.url == session.currentUrl();
         if (!msg.peer.isSelf) {
           msg.peer.updateMessageDate(msg);
@@ -2232,6 +2225,10 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     // needed because when message arives from peer this variable will be checked to
     // decide weather to show actions or not
     sendHello(false);
+    //if creator switches files, session over
+    if (!session.isClient && session.currentUrl() !== TogetherJS.config.get("sessionFileUrl")) {
+        session.close();
+    }
   }
 
   function resizeEvent() {
