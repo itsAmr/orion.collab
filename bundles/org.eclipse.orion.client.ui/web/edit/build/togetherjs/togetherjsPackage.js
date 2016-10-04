@@ -1747,7 +1747,10 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
   session.router = channels.Router();
   // Indicates if TogetherJS has just started (not continuing from a saved session):
   session.firstRun = false;
-
+  //Indicates whether or not the initial content has been received (for receivers)
+  session.received_initContent = false;
+  //Time allowed until content received fail.
+  session.CONTENTRECEIVE_TIMER = 5000;
   // This is the key we use for localStorage:
   var localStoragePrefix = "togetherjs.";
   // This is the channel to the hub:
@@ -1816,12 +1819,12 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
   };
 
   session.creatorHasLeft = function() {
-    session.close();
+    session.close("the file owner has left the session.");
   };
 
-  session.deleteTempFiles = function(filepath) {
+  session.deleteTempFiles = function(reason) {
     //delete local files
-    if (confirm("Session terminated. Do you want to delete the collaboration file from your workspace?")) {
+    if (confirm("Session terminated" + (typeof reason == 'string' ? (" because " + reason) :  ".") + "\nDo you want to delete the collaboration file from your workspace?")) {
         storage.tab.storage.lastFile =  "";
         var file = TogetherJS.config.get("sessionFileUrl").split("#/file/").pop();
         $.ajax({
@@ -1846,7 +1849,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     IGNORE_MESSAGES = [];
   }
   // These are messages sent by clients who aren't "part" of the TogetherJS session:
-  var MESSAGES_WITHOUT_CLIENTID = ["who", "invite", "init-connection"];
+  var MESSAGES_WITHOUT_CLIENTID = ["who", "invite", "init-connection", "close_yourself"];
 
   // We ignore incoming messages from the channel until this is true:
   var readyForMessages = false;
@@ -2185,7 +2188,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
   session.close = function (reason) {
     TogetherJS.running = false;
     if (session.isClient) {
-        session.deleteTempFiles();
+        session.deleteTempFiles(reason);
     }
     var msg = {type: "bye"};
     if (reason) {
@@ -8229,10 +8232,22 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   }
 
   function requestInitContent() {
+    if (!session.isClient) {
+        return;
+    }
     var msg = {
         type: "request-init-content",
         element: location
     };
+    
+    //make sure init content is received within 10 seconds
+    setTimeout(function() {
+        if (!session.received_initContent) {
+            session.close("the file owner is not in the session.");
+        }
+    }, session.CONTENTRECEIVE_TIMER);
+
+    //request content
     session.send(msg);
   }
 
@@ -8779,6 +8794,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     });
 
     session.hub.on("init-content", function (msg) {
+        session.received_initContent = true;
         console.log("initcontent received!!!");
         if (! msg.sameUrl || msg.requestorID !== session.clientId) {
            return;
