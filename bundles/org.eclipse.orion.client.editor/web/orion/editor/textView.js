@@ -6644,8 +6644,8 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			}
 
 			if (isCollabUpdate) {
-				e.selection.map(function(tempSelection, index) {
-					e.selection[index] = new Selection(tempSelection.start, tempSelection.end, tempSelection.start > tempSelection.end);
+				e.selection = e.selection.map(function(tempSelection) {
+					return new Selection(tempSelection.start, tempSelection.end, tempSelection.start > tempSelection.end);
 				});
 			}
 

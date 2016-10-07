@@ -185,8 +185,6 @@ module.exports = function(options) {
 		var structure = rest.split("/");
 		// structure.unshift(".scratch" + Date.now());
 
-		debugger;
-
 		Promise.map(structure, function(value, index) {
 			filepath = getSafeFilePath(req, "/" + structure.slice(0, index+1).join('/'));
 			req.body = { 
