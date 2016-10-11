@@ -23,12 +23,8 @@
 				}
 			});
 			require(["build/togetherjs-min.js"], function (){
-			 	TogetherJS.config("includeHashInUrl", true);
-				TogetherJS.config("dontShowClicks", true);
+				TogetherJS.config("hubBase", "http://hubserver.mybluemix.net/");
 				TogetherJS.config("ignoreMessages", ["cursor-update", "scroll-update", "keydown", "form-focus"]);
-				TogetherJS.config("suppressJoinConfirmation", true);
-				TogetherJS.config("toolName", "Orion Collab Mode");
-				TogetherJS.config("siteName", "Orion");
 				TogetherJS.config("getUserName", 
 					function() {
 						return new Promise(function(resolve, reject) {

@@ -9,7 +9,7 @@
     // Disables clicks for a certain element.
     // (e.g., 'canvas' would not show clicks on canvas elements.)
     // Setting this to true will disable clicks globally.
-    dontShowClicks: false,
+    dontShowClicks: true,
     // Experimental feature to echo clicks to certain elements across clients:
     cloneClicks: false,
     // Enable Mozilla or Google analytics on the page when TogetherJS is activated:
@@ -27,7 +27,7 @@
     // A function that will return the avatar of the user:
     getUserAvatar: null,
     // The siteName is used in the walkthrough (defaults to document.title):
-    siteName: null,
+    siteName: "Orion",
     // Whether to use the minimized version of the code (overriding the built setting)
     useMinimizedCode: undefined,
     // Append cache-busting queries (useful for development!)
@@ -42,7 +42,7 @@
     // The name of this tool as provided to users.  The UI is updated to use this.
     // Because of how it is used in text it should be a proper noun, e.g.,
     // "MySite's Collaboration Tool"
-    toolName: null,
+    toolName: "Orion Collab Mode",
     // Used to auto-start TogetherJS with a {prefix: pageName, max: participants}
     // Also with findRoom: "roomName" it will connect to the given room name
     findRoom: null,
@@ -50,7 +50,7 @@
     autoStart: false,
     // If true, then the "Join TogetherJS Session?" confirmation dialog
     // won't come up
-    suppressJoinConfirmation: false,
+    suppressJoinConfirmation: true,
     // If true, then the "Invite a friend" window won't automatically come up
     suppressInvite: false,
     // A room in which to find people to invite to this session,
@@ -63,7 +63,7 @@
     // of the page; i.e., if you one person is on `http://example.com/#view1`
     // and another person is at `http://example.com/#view2` then these two people
     // are considered to be at completely different URLs
-    includeHashInUrl: false,
+    includeHashInUrl: true,
     // When true, the WebRTC-based mic/chat will be disabled
     disableWebRTC: false,
     // When true, youTube videos will synchronize
@@ -584,7 +584,7 @@
     // The name of this tool as provided to users.  The UI is updated to use this.
     // Because of how it is used in text it should be a proper noun, e.g.,
     // "MySite's Collaboration Tool"
-    toolName: null,
+    toolName: "Orion Collab Mode",
     // Used to auto-start TogetherJS with a {prefix: pageName, max: participants}
     // Also with findRoom: "roomName" it will connect to the given room name
     findRoom: null,
