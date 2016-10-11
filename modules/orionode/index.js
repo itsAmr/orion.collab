@@ -53,21 +53,21 @@ function startServer(options) {
 				res.redirect(fullUrl);
 			} else {
 				req.user.workspaceDir = options.workspaceDir + (req.user.workspace ? "/" + req.user.workspace : "");
-			}
+				
+				//make sure you got all the info you need to create the temp files and establish the session.
+				var collabParams = req.params["0"];
+				var extraParamsIndex = collabParams.indexOf('&');
+				var collabSessionID = collabParams.substring(extraParamsIndex != -1 ? extraParamsIndex : collabParams.length, collabParams.length);
+				if (collabSessionID.length > 0) {
+					req.collabSessionID = collabSessionID;
+				}
+				collabParams = collabParams.substring(0, extraParamsIndex != -1 ? extraParamsIndex : collabParams.length);
 
-			//make sure you got all the info you need to create the temp files and establish the session.
-			var collabParams = req.params["0"];
-			var extraParamsIndex = collabParams.indexOf('&');
-			var collabSessionID = collabParams.substring(extraParamsIndex != -1 ? extraParamsIndex : collabParams.length, collabParams.length);
-			if (collabSessionID.length > 0) {
-				req.collabSessionID = collabSessionID;
-			}
-			collabParams = collabParams.substring(0, extraParamsIndex != -1 ? extraParamsIndex : collabParams.length);
-
-			if (collabParams.length === 0) {
-				res.redirect('/');
-			} else {
-				next();
+				if (collabParams.length === 0) {
+					res.redirect('/');
+				} else {
+					next();
+				}
 			}
 		}
 
