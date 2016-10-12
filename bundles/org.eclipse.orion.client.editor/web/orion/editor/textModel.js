@@ -500,10 +500,22 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 		 * @param {String} [text=""] the new text.
 		 * @param {Number} [start=0] the zero based start offset of text range.
 		 * @param {Number} [end=char count] the zero based end offset of text range.
+		 * @param {Boolean} Whether or not the change comes from another user in a collaborative session.
 		 *
 		 * @see orion.editor.TextModel#getText
 		 */
-		setText: function(text, start, end) {
+		setText: function(text, start, end, isUpdate = false) {
+			//fire custom event if collaboration mode is on.
+			if (!isUpdate && this.startCollab) {
+				var e = {
+					'text': text,
+					'start': start,
+					'end': end
+				};
+				var event = new CustomEvent("collaborateChange", {"detail": {"e": e}});
+				document.dispatchEvent(event);
+			}
+
 			if (text === undefined) { text = ""; }
 			if (start === undefined) { start = 0; }
 			if (end === undefined) { end = this.getCharCount(); }
@@ -629,6 +641,30 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 				addedLineCount: addedLineCount
 			};
 			this.onChanged(modelChangedEvent);
+		},
+		/**
+		 * Hooks the collaboration events to the textModel.
+		 * <p>
+		 * The TogetherJS files communicate with the textModel directly through these events.
+		 * </p>
+		 */
+		_initCollaboration: function() {
+			var event = new CustomEvent("readyToGetContent", {"detail": {"e": "contents"}});
+			document.dispatchEvent(event);
+			that = this;
+			document.addEventListener('getInitContent', function(e) {
+				that.startCollab = true;
+				var txt = that.getText();
+				var event = new CustomEvent("sendInitContent", {"detail": {"e": {text: txt, requestorID: e.detail.msg.peer.id}}});
+				document.dispatchEvent(event);
+			}, true);
+			document.addEventListener('setInitContent', function(e) {
+				that.setText(e.detail.msg);
+				that.startCollab = true;
+			}, true);
+			document.addEventListener('receivedUpdate', function(e) {
+				that.setText(e.detail.msg.text, e.detail.msg.start, e.detail.msg.end, true);
+			}, true);
 		}
 	};
 	mEventTarget.EventTarget.addMixin(TextModel.prototype);

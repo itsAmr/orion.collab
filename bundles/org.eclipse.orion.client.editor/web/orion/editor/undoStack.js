@@ -63,16 +63,6 @@ define("orion/editor/undoStack", [], function() { //$NON-NLS-0$
 		},
 		_doUndoRedo: function(offset, text, previousText, view, select) {
 			this.model.setText(text, offset, offset + previousText.length);
-			//if in collaboration mode, fire a change event
-			changeObject = {
-				'start': offset,
-				'end': offset + previousText.length,
-				'text': text,
-				selection: [{start: offset, end: offset + previousText.length}]
-			}
-			var event = new CustomEvent("collaborateChange", {"detail": {"e": changeObject}});
-			document.dispatchEvent(event);
-
 			if (select && view) {
 				var model = view.getModel();
 				if (model !== this.model) {

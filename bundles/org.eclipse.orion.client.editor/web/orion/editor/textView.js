@@ -6383,19 +6383,6 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			var win = this._getWindow();
 			var grabNode = util.isIE ? doc : win;
 
-			//add random event that will fire socket event 'form-update' 
-			document.addEventListener('receivedUpdate', function(e) { e.detail.msg.isUpdate = true; that._modifyContent(e.detail.msg)}, true);
-			window.firstLoad = true;
-			document.addEventListener('getInitContent', function(e) { 
-				var txt = that.getText();
-				var event = new CustomEvent("sendInitContent", {"detail": {"e": {text: txt, requestorID: e.detail.msg.peer.id}}});
-				document.dispatchEvent(event);
-			}, true);
-			document.addEventListener('setInitContent', function(e) { 
-				window.firstLoad = true;
-				that.setText(e.detail.msg);
-			}, true);
-
 			handlers.push({target: win, type: "resize", handler: function(e) { return that._handleResize(e ? e : win.event);}}); //$NON-NLS-1$
 			handlers.push({target: clientDiv, type: "blur", handler: function(e) { return that._handleBlur(e ? e : win.event);}}); //$NON-NLS-1$
 			handlers.push({target: clientDiv, type: "focus", handler: function(e) { return that._handleFocus(e ? e : win.event);}}); //$NON-NLS-1$
@@ -6610,15 +6597,6 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			}
 		},
 		_modifyContent: function(e, caretAtEnd, show, callback) {
-			//fire custom event if collaboration mode is on.
-			var isCollabUpdate = Object.prototype.hasOwnProperty.call(e, 'isUpdate') && e.isUpdate;
-
-			if (!window.firstLoad && !isCollabUpdate) {
-				var event = new CustomEvent("collaborateChange", {"detail": {"e": e}});
-				document.dispatchEvent(event);
-			}
-			window.firstLoad = false;
-
 			if (this._readonly && !e._code) {
 				return false;
 			}
@@ -6643,12 +6621,6 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 				if (e.selection.length > 1) this._startUndo();
 			}
 
-			if (isCollabUpdate) {
-				e.selection = e.selection.map(function(tempSelection) {
-					return new Selection(tempSelection.start, tempSelection.end, tempSelection.start > tempSelection.end);
-				});
-			}
-
 			var model = this._model;
 			try {
 				if (e._ignoreDOMSelection) { this._ignoreDOMSelection = true; }
@@ -6665,11 +6637,8 @@ define("orion/editor/textView", [  //$NON-NLS-1$
 			} finally {
 				if (e._ignoreDOMSelection) { this._ignoreDOMSelection = false; }
 			}
-			if (!isCollabUpdate) {
-				this._setSelection(e.selection, show, true, callback);
-			} else if (isCollabUpdate) {
-				//here we can update the selections of other users in the document
-			}
+			
+			this._setSelection(e.selection, show, true, callback);
 
 			undo = this._compoundChange;
 			if (undo) undo.owner.selection = e.selection;
