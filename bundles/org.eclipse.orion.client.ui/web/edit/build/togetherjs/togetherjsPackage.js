@@ -7361,6 +7361,8 @@ define('ot',["util"], function (util) {
    * which is the main difference with ot.History.  Everyone applies
    * the same patches in the same order.
    */
+  var simpleHistorySingleton = null;
+
   ot.SimpleHistory = util.Class({
 
     constructor: function(clientId, initState, initBasis) {
@@ -7939,12 +7941,15 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
 
   function sendInitContent(event) {
     if (!session.isClient) {
+        // var el = $("div.textviewContent:first");
+        // history = el.data("togetherjsHistory");
         var message = {
             type: "init-content",
             requestorID: event.originalEvent.detail.e.requestorID,
             value: {
                 text: event.originalEvent.detail.e.text
             }
+            // basis: history.basis
         }
         session.send(message);
     }
@@ -7954,12 +7959,13 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     if (!session.isClient) {
         return;
     }
+    setInit();
     var msg = {
         type: "request-init-content",
         element: location
     };
     
-    //make sure init content is received within 10 seconds
+    //make sure init content is received within x seconds
     setTimeout(function() {
         if (!session.received_initContent) {
             session.close("the file owner is not in the session.");
@@ -7972,8 +7978,9 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
 
   function change(event) {
     sendData({
-      element: event.target,
+      element: event.target.activeElement,
       value: event.originalEvent.detail.e
+      // value: event.target.activeElement.innerText
     });
   }
 
@@ -7985,34 +7992,25 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     if (inRemoteUpdate) {
       return;
     }
-    if (elementFinder.ignoreElement(el) ||
-        (elementTracked(el) && !tracker) ||
-        suppressSync(el)) {
-      return;
-    }
     var location = elementFinder.elementLocation(el);
     var msg = {
       type: "form-update",
       element: location
     };
-    if (isText(el) || tracker) {
-      var history = el.data("togetherjsHistory");
-      if (history) {
+    var history = el.data("togetherjsHistory");
+    if (history) {
         if (history.current == value) {
-          return;
+            return;
         }
         var delta = ot.TextReplace.fromChange(history.current, value);
         assert(delta);
         history.add(delta);
         maybeSendUpdate(msg.element, history, tracker);
         return;
-      } else {
+    } else {
         msg.value = value;
         msg.basis = 1;
         el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
-      }
-    } else {
-      msg.value = value;
     }
     session.send(msg);
   }
@@ -8048,6 +8046,73 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       setInit();
     }
   };
+
+  var OrionEditor = util.Class({
+
+    trackerName: "OrionEditor",
+
+    constructor: function (el) {
+      this.element = $(el)[0];
+      assert($(this.element).hasClass("ace_editor"));
+      this._change = this._change.bind(this);
+      this._editor().document.on("change", this._change);
+    },
+
+    tracked: function (el) {
+      return this.element === $(el)[0];
+    },
+
+    destroy: function (el) {
+      this._editor().document.removeListener("change", this._change);
+    },
+
+    update: function (msg) {
+      this._editor().document.setValue(msg.value);
+    },
+
+    init: function (update, msg) {
+      this.update(update);
+    },
+
+    makeInit: function () {
+      return {
+        element: this.element,
+        tracker: this.trackerName,
+        value: this._editor().document.getValue()
+      };
+    },
+
+    _editor: function () {
+      return this.element.env;
+    },
+
+    _change: function (e) {
+      // FIXME: I should have an internal .send() function that automatically
+      // asserts !inRemoteUpdate, among other things
+      if (inRemoteUpdate) {
+        return;
+      }
+      sendData({
+        tracker: this.trackerName,
+        element: this.element,
+        value: this.getContent()
+      });
+    },
+
+    getContent: function() {
+      return this._editor().document.getValue();
+    }
+  });
+
+  OrionEditor.scan = function () {
+    return $(".ace_editor");
+  };
+
+  OrionEditor.tracked = function (el) {
+    return !! $(el).closest(".ace_editor").length;
+  };
+
+  TogetherJS.addTracker(OrionEditor, false /* skip setInit */);
 
   var AceEditor = util.Class({
 
@@ -8514,10 +8579,20 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
 
     session.hub.on("init-content", function (msg) {
         session.received_initContent = true;
+        var el = $("div.textviewContent:first");
+        var history = el.data("togetherjsHistory");
         console.log("initcontent received!!!");
         if (! msg.sameUrl || msg.requestorID !== session.clientId) {
            return;
         } else {
+            if (!history) {
+                el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, msg.value.text, 1));
+            } else {
+                // el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, msg.value.text, msg.basis));
+                // history.current = history.committed = msg.value.text;
+                // history.basis = msg.basis;
+                history.current = msg.value.text;
+            }
             var event = new CustomEvent("setInitContent", {"detail" : {"msg": msg.value.text}});
             document.dispatchEvent(event);
             console.log("received init content: " + msg)
@@ -8528,76 +8603,54 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   session.hub.on("form-update", function (msg) {
     if (! msg.sameUrl) {
       return;
-    } else {
-        var event = new CustomEvent("receivedUpdate", {"detail": {"msg": msg.value}});
-        document.dispatchEvent(event);
-        console.log("received update: " + msg)
-        return;
+    } 
+    var el = $("div.textviewContent:first");
+    var tracker;
+    if (msg.tracker) {
+      tracker = getTracker(el, msg.tracker);
+      assert(tracker);
     }
-    // var el = $(elementFinder.findElement(msg.element));
-    // var tracker;
-    // if (msg.tracker) {
-    //   tracker = getTracker(el, msg.tracker);
-    //   assert(tracker);
-    // }
-    // var focusedEl = el[0].ownerDocument.activeElement;
-    // var focusedElSelection;
-    // if (isText(focusedEl)) {
-    //   focusedElSelection = [focusedEl.selectionStart, focusedEl.selectionEnd];
-    // }
-    // var selection;
-    // if (isText(el)) {
-    //   selection = [el[0].selectionStart, el[0].selectionEnd];
-    // }
-    // var value;
-    // if (msg.replace) {
-    //   var history = el.data("togetherjsHistory");
-    //   if (!history) {
-    //     console.warn("form update received for uninitialized form element");
-    //     return;
-    //   }
-    //   history.setSelection(selection);
-    //   // make a real TextReplace object.
-    //   msg.replace.delta = ot.TextReplace(msg.replace.delta.start,
-    //                                      msg.replace.delta.del,
-    //                                      msg.replace.delta.text);
-    //   // apply this change to the history
-    //   var changed = history.commit(msg.replace);
-    //   var trackerName = null;
-    //   if (typeof tracker != "undefined") {
-    //     trackerName = tracker.trackerName;
-    //   }
-    //   maybeSendUpdate(msg.element, history, trackerName);
-    //   if (! changed) {
-    //     return;
-    //   }
-    //   value = history.current;
-    //   selection = history.getSelection();
-    // } else {
-    //   value = msg.value;
-    // }
-    // inRemoteUpdate = true;
-    // try {
-    //   if(tracker) {
-    //     tracker.update({value:value});
-    //   } else {
-    //     setValue(el, value);
-    //   }
-    //   if (isText(el)) {
-    //     el[0].selectionStart = selection[0];
-    //     el[0].selectionEnd = selection[1];
-    //   }
-    //   // return focus to original input:
-    //   if (focusedEl != el[0]) {
-    //     focusedEl.focus();
-    //     if (isText(focusedEl)) {
-    //       focusedEl.selectionStart = focusedElSelection[0];
-    //       focusedEl.selectionEnd = focusedElSelection[1];
-    //     }
-    //   }
-    // } finally {
-    //   inRemoteUpdate = false;
-    // }
+    var value;
+    if (msg.replace) {
+      var history = el.data("togetherjsHistory");
+      if (!history) {
+        console.warn("form update received for uninitialized form element");
+        return;
+      }
+      // make a real TextReplace object.
+      msg.replace.delta = ot.TextReplace(msg.replace.delta.start,
+                                         msg.replace.delta.del,
+                                         msg.replace.delta.text);
+      // apply this change to the history
+      var curr = history.current;
+      var changed = history.commit(msg.replace);
+      var trackerName = null;
+      if (typeof tracker != "undefined") {
+        trackerName = tracker.trackerName;
+      }
+      maybeSendUpdate(msg.element, history, trackerName);
+      if (! changed) {
+        return;
+      }
+      value = history.current;
+    } else {
+      value = msg.value;
+    }
+    inRemoteUpdate = true;
+    try {
+      if(tracker) {
+        tracker.update({value:value});
+      } else {
+        if (msg.replace) {
+            delta = ot.TextReplace.fromChange(curr, value)
+            var event = new CustomEvent("receivedUpdate", {"detail": {"msg": delta}});
+            document.dispatchEvent(event);
+            console.log("received update: " + msg);
+        }
+      }
+    } finally {
+      inRemoteUpdate = false;
+    }
   });
 
   var initSent = false;
@@ -8609,7 +8662,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       pageAge: Date.now() - TogetherJS.pageLoaded,
       updates: []
     };
-    var els = $("textarea, input, select");
+    var els = $("div.textviewContent:first");
     els.each(function () {
       if (elementFinder.ignoreElement(this) || elementTracked(this) ||
           suppressSync(this)) {
@@ -8648,18 +8701,19 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   }
 
   function setInit() {
-    var els = $("textarea, input, select");
-    els.each(function () {
-      if (elementTracked(this)) {
-        return;
-      }
-      if (elementFinder.ignoreElement(this)) {
-        return;
-      }
-      var el = $(this);
-      var value = getValue(el);
-      el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
-    });
+    var els = $("div.textviewContent:first");
+    els.data("togetherjsHistory", ot.SimpleHistory(session.clientId, "", 1));
+    // els.each(function () {
+    //   if (elementTracked(this)) {
+    //     return;
+    //   }
+    //   if (elementFinder.ignoreElement(this)) {
+    //     return;
+    //   }
+    //   var el = $(this);
+    //   var value = el[0].innerText;
+    //   el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
+    // });
     destroyTrackers();
     buildTrackers();
   }

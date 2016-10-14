@@ -505,17 +505,6 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 		 * @see orion.editor.TextModel#getText
 		 */
 		setText: function(text, start, end, isUpdate = false) {
-			//fire custom event if collaboration mode is on.
-			if (!isUpdate && this.startCollab) {
-				var e = {
-					'text': text,
-					'start': start,
-					'end': end
-				};
-				var event = new CustomEvent("collaborateChange", {"detail": {"e": e}});
-				document.dispatchEvent(event);
-			}
-
 			if (text === undefined) { text = ""; }
 			if (start === undefined) { start = 0; }
 			if (end === undefined) { end = this.getCharCount(); }
@@ -641,6 +630,11 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 				addedLineCount: addedLineCount
 			};
 			this.onChanged(modelChangedEvent);
+
+			if (!isUpdate && this.startCollab) {
+				var event = new CustomEvent("collaborateChange", {"detail": {"e": this.getText()}});
+				document.dispatchEvent(event);
+			}
 		},
 		/**
 		 * Hooks the collaboration events to the textModel.
@@ -649,7 +643,7 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 		 * </p>
 		 */
 		_initCollaboration: function() {
-			var event = new CustomEvent("readyToGetContent", {"detail": {"e": "contents"}});
+			var event = new CustomEvent("readyToGetContent", {"detail": {"e": " "}});
 			document.dispatchEvent(event);
 			that = this;
 			document.addEventListener('getInitContent', function(e) {
@@ -663,7 +657,7 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 				that.startCollab = true;
 			}, true);
 			document.addEventListener('receivedUpdate', function(e) {
-				that.setText(e.detail.msg.text, e.detail.msg.start, e.detail.msg.end, true);
+				that.setText(e.detail.msg.text, e.detail.msg.start, e.detail.msg.start + e.detail.msg.del, true);
 			}, true);
 		}
 	};
