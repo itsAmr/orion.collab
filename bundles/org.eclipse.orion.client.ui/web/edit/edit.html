@@ -22,25 +22,8 @@
 					require(["orion/splash"], load, load);
 				}
 			});
-			require(["build/togetherjs-min.js"], function (){
+			require(["build/togetherjs-min.js"] , function() {
 				TogetherJS.config("hubBase", "http://hubserver.mybluemix.net/");
-				TogetherJS.config("ignoreMessages", ["cursor-update", "scroll-update", "keydown", "form-focus"]);
-				TogetherJS.config("getUserName", 
-					function() {
-						return new Promise(function(resolve, reject) {
-							$.ajax({
-								url: '/login',
-								type: 'POST',
-								success: function(result) {
-									resolve(result.UserName);
-								},
-								fail: function() {
-									reject();
-								}
-							});
-						});
-					}
-				);
 			});
 		</script>
 	</head>

@@ -655,9 +655,12 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 			document.addEventListener('setInitContent', function(e) {
 				that.setText(e.detail.msg);
 				that.startCollab = true;
+				var event = new CustomEvent("modelHere", {"detail": {"model": that}});
+				document.dispatchEvent(event);
 			}, true);
-			document.addEventListener('receivedUpdate', function(e) {
-				that.setText(e.detail.msg.text, e.detail.msg.start, e.detail.msg.start + e.detail.msg.del, true);
+			document.addEventListener('modelNeeded', function(e) {
+			    var event = new CustomEvent("modelHere", {"detail": {"model": that}});
+			    document.dispatchEvent(event);
 			}, true);
 		}
 	};

@@ -7933,16 +7933,11 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     // Called when we get an event that may or may not indicate a real change
     // (like keyup in a textarea)
     change(event);
-    // var tag = event.target.tagName;
-    // if (tag == "TEXTAREA" || tag == "INPUT") {
-    //   change(event);
-    // }
   }
 
   function sendInitContent(event) {
     if (!session.isClient) {
-        // var el = $("div.textviewContent:first");
-        // history = el.data("togetherjsHistory");
+        // history = ot.simpleHistorySingleton;
         var message = {
             type: "init-content",
             requestorID: event.originalEvent.detail.e.requestorID,
@@ -7959,7 +7954,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     if (!session.isClient) {
         return;
     }
-    setInit();
     var msg = {
         type: "request-init-content",
         element: location
@@ -7997,7 +7991,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       type: "form-update",
       element: location
     };
-    var history = el.data("togetherjsHistory");
+    var history = ot.simpleHistorySingleton;
     if (history) {
         if (history.current == value) {
             return;
@@ -8010,7 +8004,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     } else {
         msg.value = value;
         msg.basis = 1;
-        el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
+        ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, value, 1);
     }
     session.send(msg);
   }
@@ -8051,23 +8045,30 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
 
     trackerName: "OrionEditor",
 
-    constructor: function (el) {
-      this.element = $(el)[0];
-      assert($(this.element).hasClass("ace_editor"));
+    constructor: function (model) {
+      this.model = model;
+      this.element = "div.textviewContent";
+      assert(model);
       this._change = this._change.bind(this);
-      this._editor().document.on("change", this._change);
+      $(document).on("collaborateChange", this._change);
+      // $(document).on("sendInitContent", sendInitContent);
     },
-
+    
     tracked: function (el) {
-      return this.element === $(el)[0];
+        // return this.element === $(el)[0];
+        return true;
     },
 
     destroy: function (el) {
-      this._editor().document.removeListener("change", this._change);
+        $(document).off("collaborateChange", this._change);
+    },
+    
+    setContent: function(e) {
+        this.model.setText(e.msg.text, e.msg.start, e.msg.start + e.msg.del, true);
     },
 
     update: function (msg) {
-      this._editor().document.setValue(msg.value);
+      this.model.setText(msg.value);
     },
 
     init: function (update, msg) {
@@ -8078,7 +8079,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       return {
         element: this.element,
         tracker: this.trackerName,
-        value: this._editor().document.getValue()
+        value: this.model.getContent()
       };
     },
 
@@ -8086,7 +8087,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       return this.element.env;
     },
 
-    _change: function (e) {
+    _change: function (event) {
       // FIXME: I should have an internal .send() function that automatically
       // asserts !inRemoteUpdate, among other things
       if (inRemoteUpdate) {
@@ -8095,343 +8096,24 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       sendData({
         tracker: this.trackerName,
         element: this.element,
-        value: this.getContent()
+        value: event.originalEvent.detail.e
       });
     },
 
     getContent: function() {
-      return this._editor().document.getValue();
+      return this.model.getText();
     }
   });
 
   OrionEditor.scan = function () {
-    return $(".ace_editor");
+    return true;
   };
 
   OrionEditor.tracked = function (el) {
-    return !! $(el).closest(".ace_editor").length;
+    true;
   };
 
-  TogetherJS.addTracker(OrionEditor, false /* skip setInit */);
-
-  var AceEditor = util.Class({
-
-    trackerName: "AceEditor",
-
-    constructor: function (el) {
-      this.element = $(el)[0];
-      assert($(this.element).hasClass("ace_editor"));
-      this._change = this._change.bind(this);
-      this._editor().document.on("change", this._change);
-    },
-
-    tracked: function (el) {
-      return this.element === $(el)[0];
-    },
-
-    destroy: function (el) {
-      this._editor().document.removeListener("change", this._change);
-    },
-
-    update: function (msg) {
-      this._editor().document.setValue(msg.value);
-    },
-
-    init: function (update, msg) {
-      this.update(update);
-    },
-
-    makeInit: function () {
-      return {
-        element: this.element,
-        tracker: this.trackerName,
-        value: this._editor().document.getValue()
-      };
-    },
-
-    _editor: function () {
-      return this.element.env;
-    },
-
-    _change: function (e) {
-      // FIXME: I should have an internal .send() function that automatically
-      // asserts !inRemoteUpdate, among other things
-      if (inRemoteUpdate) {
-        return;
-      }
-      sendData({
-        tracker: this.trackerName,
-        element: this.element,
-        value: this.getContent()
-      });
-    },
-
-    getContent: function() {
-      return this._editor().document.getValue();
-    }
-  });
-
-  AceEditor.scan = function () {
-    return $(".ace_editor");
-  };
-
-  AceEditor.tracked = function (el) {
-    return !! $(el).closest(".ace_editor").length;
-  };
-
-  TogetherJS.addTracker(AceEditor, true /* skip setInit */);
-
-  var CodeMirrorEditor = util.Class({
-    trackerName: "CodeMirrorEditor",
-
-    constructor: function (el) {
-      this.element = $(el)[0];
-      assert(this.element.CodeMirror);
-      this._change = this._change.bind(this);
-      this._editor().on("change", this._change);
-    },
-
-    tracked: function (el) {
-      return this.element === $(el)[0];
-    },
-
-    destroy: function (el) {
-      this._editor().off("change", this._change);
-    },
-
-    update: function (msg) {
-      this._editor().setValue(msg.value);
-    },
-
-    init: function (msg) {
-      if (msg.value) {
-        this.update(msg);
-      }
-    },
-
-    makeInit: function () {
-      return {
-        element: this.element,
-        tracker: this.trackerName,
-        value: this._editor().getValue()
-      };
-    },
-
-    _change: function (editor, change) {
-      if (inRemoteUpdate) {
-        return;
-      }
-      sendData({
-        tracker: this.trackerName,
-        element: this.element,
-        value: this.getContent()
-      });
-    },
-
-    _editor: function () {
-      return this.element.CodeMirror;
-    },
-
-    getContent: function() {
-      return this._editor().getValue();
-    }
-  });
-
-  CodeMirrorEditor.scan = function () {
-    var result = [];
-    var els = document.body.getElementsByTagName("*");
-    var _len = els.length;
-    for (var i=0; i<_len; i++) {
-      var el = els[i];
-      if (el.CodeMirror) {
-        result.push(el);
-      }
-    }
-    return $(result);
-  };
-
-  CodeMirrorEditor.tracked = function (el) {
-    el = $(el)[0];
-    while (el) {
-      if (el.CodeMirror) {
-        return true;
-      }
-      el = el.parentNode;
-    }
-    return false;
-  };
-
-  TogetherJS.addTracker(CodeMirrorEditor, true /* skip setInit */);
-
-  var CKEditor = util.Class({
-    trackerName: "CKEditor",
-
-    constructor: function (el) {
-      this.element = $(el)[0];
-      assert(CKEDITOR);
-      assert(CKEDITOR.dom.element.get(this.element));
-      this._change = this._change.bind(this);
-      // FIXME: change event is available since CKEditor 4.2
-      this._editor().on("change", this._change);
-    },
-    tracked: function (el) {
-      return this.element === $(el)[0];
-    },
-    destroy: function (el) {
-      this._editor().removeListener("change", this._change);
-    },
-
-    update: function (msg) {
-      //FIXME: use setHtml instead of setData to avoid frame reloading overhead
-      this._editor().editable().setHtml(msg.value);
-    },
-
-    init: function (update, msg) {
-      this.update(update);
-    },
-
-    makeInit: function () {
-      return {
-        element: this.element,
-        tracker: this.trackerName,
-        value: this.getContent()
-      };
-    },
-
-    _change: function (e) {
-      if (inRemoteUpdate) {
-        return;
-      }
-      sendData({
-        tracker: this.trackerName,
-        element: this.element,
-        value: this.getContent()
-      });
-    },
-
-    _editor: function () {
-      return CKEDITOR.dom.element.get(this.element).getEditor();
-    },
-    
-    getContent: function () {
-      return this._editor().getData();
-    }
-  });
-
-  CKEditor.scan = function () {
-    var result = [];
-    if (typeof CKEDITOR == "undefined") {
-      return;
-    }
-    var editorInstance;
-    for (var instanceIdentifier in CKEDITOR.instances) {
-      editorInstance = document.getElementById(instanceIdentifier) || document.getElementsByName(instanceIdentifier)[0];
-      if (editorInstance) {
-        result.push(editorInstance);
-      }
-    }
-    return $(result);
-  };
-
-  CKEditor.tracked = function (el) {
-    if (typeof CKEDITOR == "undefined") {
-      return false;
-    }
-    el = $(el)[0];
-    return !! (CKEDITOR.dom.element.get(el) && CKEDITOR.dom.element.get(el).getEditor());
-  };
-
-  TogetherJS.addTracker(CKEditor, true /* skip setInit */);
-
-  //////////////////// BEGINNING OF TINYMCE ////////////////////////
-  var tinymceEditor = util.Class({
-    trackerName: "tinymceEditor",
-
-    constructor: function (el) {
-      this.element = $(el)[0];
-      assert($(this.element).attr('id').indexOf('mce_') != -1);
-      this._change = this._change.bind(this);
-      this._editor().on("input keyup cut paste change", this._change);
-    },
-
-    tracked: function (el) {
-      return this.element === $(el)[0];
-    },
-
-    destroy: function (el) {
-      this._editor().destory();
-    },
-
-    update: function (msg) {
-      this._editor().setContent(msg.value, {format: 'raw'});
-    },
-
-    init: function (update, msg) {
-      this.update(update);
-    },
-
-    makeInit: function () {
-      return {
-        element: this.element,
-        tracker: this.trackerName,
-        value: this.getContent()
-      };
-    },
-
-    _change: function (e) {
-      if (inRemoteUpdate) {
-        return;
-      }  
-      sendData({
-        tracker: this.trackerName,
-        element: this.element,
-        value: this.getContent()
-      });
-    },
-
-    _editor: function () {
-      if (typeof tinymce == "undefined") {
-        return;
-      }
-      return $(this.element).data("tinyEditor");
-    },
-    
-    getContent: function () {
-      return this._editor().getContent();
-    }
-  });
-
-  tinymceEditor.scan = function () {
-    //scan all the elements that contain tinyMCE editors
-    if (typeof tinymce == "undefined") {
-      return;
-    }
-    var result = [];
-    $(window.tinymce.editors).each(function (i, ed) {
-      result.push($('#'+ed.id));
-      //its impossible to retrieve a single editor from a container, so lets store it
-      $('#'+ed.id).data("tinyEditor", ed);
-    });
-    return $(result);
-  };
-
-  tinymceEditor.tracked = function (el) {
-    if (typeof tinymce == "undefined") {
-      return false;
-    }
-    el = $(el)[0];
-    return !!$(el).data("tinyEditor");
-    /*var flag = false;
-    $(window.tinymce.editors).each(function (i, ed) {
-      if (el.id == ed.id) {
-        flag = true;
-      }
-    });
-    return flag;*/
-  };
-
-  TogetherJS.addTracker(tinymceEditor, true);
-  ///////////////// END OF TINYMCE ///////////////////////////////////
+  TogetherJS.addTracker(OrionEditor, true /* skip setInit */);
 
   function buildTrackers() {
     assert(! liveTrackers.length);
@@ -8440,7 +8122,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       if (els) {
         $.each(els, function () {
           var tracker = new TrackerClass(this);
-          $(this).data("togetherjsHistory", ot.SimpleHistory(session.clientId, tracker.getContent(), 1));
+          ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, tracker.getContent(), 1);
           liveTrackers.push(tracker);
         });
       }
@@ -8462,6 +8144,26 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       }
     });
     return result;
+  }
+
+  function startOrionTracking(model) {
+    var tracker = new OrionEditor(model);
+    ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, tracker.getContent(), 1);
+    liveTrackers.push(tracker);
+  }
+
+  function getOrionTracker() {
+    for (var i=0; i<liveTrackers.length; i++) {
+      var tracker = liveTrackers[i];
+      if (tracker.trackerName == "OrionEditor") {
+        //FIXME: assert statement below throws an exception when data is submitted to the hub too fast
+        //in other words, name == tracker.trackerName instead of name == tracker when someone types too fast in the tracked editor
+        //commenting out this assert statement solves the problem
+        // assert((! name) || name == tracker.trackerName, "Expected to map to a tracker type", name, "but got", tracker.trackerName);
+        return tracker;
+      }
+    }
+    return null;
   }
 
   function getTracker(el, name) {
@@ -8579,16 +8281,15 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
 
     session.hub.on("init-content", function (msg) {
         session.received_initContent = true;
-        var el = $("div.textviewContent:first");
-        var history = el.data("togetherjsHistory");
+        var history = ot.simpleHistorySingleton;
         console.log("initcontent received!!!");
         if (! msg.sameUrl || msg.requestorID !== session.clientId) {
            return;
         } else {
             if (!history) {
-                el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, msg.value.text, 1));
+                ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, msg.value.text, 1);
             } else {
-                // el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, msg.value.text, msg.basis));
+                // ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, msg.value.text, msg.basis);
                 // history.current = history.committed = msg.value.text;
                 // history.basis = msg.basis;
                 history.current = msg.value.text;
@@ -8604,15 +8305,14 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     if (! msg.sameUrl) {
       return;
     } 
-    var el = $("div.textviewContent:first");
     var tracker;
     if (msg.tracker) {
-      tracker = getTracker(el, msg.tracker);
+      tracker = getOrionTracker();
       assert(tracker);
     }
     var value;
     if (msg.replace) {
-      var history = el.data("togetherjsHistory");
+      var history = ot.simpleHistorySingleton;
       if (!history) {
         console.warn("form update received for uninitialized form element");
         return;
@@ -8639,14 +8339,8 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     inRemoteUpdate = true;
     try {
       if(tracker) {
-        tracker.update({value:value});
-      } else {
-        if (msg.replace) {
-            delta = ot.TextReplace.fromChange(curr, value)
-            var event = new CustomEvent("receivedUpdate", {"detail": {"msg": delta}});
-            document.dispatchEvent(event);
-            console.log("received update: " + msg);
-        }
+        delta = ot.TextReplace.fromChange(curr, value);
+        tracker.setContent({msg: delta});
       }
     } finally {
       inRemoteUpdate = false;
@@ -8662,60 +8356,60 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       pageAge: Date.now() - TogetherJS.pageLoaded,
       updates: []
     };
-    var els = $("div.textviewContent:first");
-    els.each(function () {
-      if (elementFinder.ignoreElement(this) || elementTracked(this) ||
-          suppressSync(this)) {
-        return;
-      }
-      var el = $(this);
-      var value = getValue(el);
-      var upd = {
-        element: elementFinder.elementLocation(this),
-        //elementType: getElementType(el), // added in 5cbb88c9a but unused
-        value: value
-      };
-      if (isText(el)) {
-        var history = el.data("togetherjsHistory");
-        if (history) {
-          upd.value = history.committed;
-          upd.basis = history.basis;
-        }
-      }
-      msg.updates.push(upd);
-    });
-    liveTrackers.forEach(function (tracker) {
-      var init = tracker.makeInit();
-      assert(tracker.tracked(init.element));
-      var history = $(init.element).data("togetherjsHistory");
-      if (history) {
-        init.value = history.committed;
-        init.basis = history.basis;
-      }
-      init.element = elementFinder.elementLocation($(init.element));
-      msg.updates.push(init);
-    });
+    // var els = $("div.textviewContent:first");
+    // els.each(function () {
+    //   if (elementFinder.ignoreElement(this) || elementTracked(this) ||
+    //       suppressSync(this)) {
+    //     return;
+    //   }
+    //   var el = $(this);
+    //   var value = getValue(el);
+    //   var upd = {
+    //     element: elementFinder.elementLocation(this),
+    //     //elementType: getElementType(el), // added in 5cbb88c9a but unused
+    //     value: value
+    //   };
+    //   if (isText(el)) {
+    //     var history = ot.simpleHistorySingleton;
+    //     if (history) {
+    //       upd.value = history.committed;
+    //       upd.basis = history.basis;
+    //     }
+    //   }
+    //   msg.updates.push(upd);
+    // });
+    // liveTrackers.forEach(function (tracker) {
+    //   var init = tracker.makeInit();
+    //   assert(tracker.tracked(init.element));
+    //   var history = ot.simpleHistorySingleton;
+    //   if (history) {
+    //     init.value = history.committed;
+    //     init.basis = history.basis;
+    //   }
+    //   init.element = elementFinder.elementLocation($(init.element));
+    //   msg.updates.push(init);
+    // });
     if (msg.updates.length) {
       session.send(msg);
     }
   }
 
   function setInit() {
-    var els = $("div.textviewContent:first");
-    els.data("togetherjsHistory", ot.SimpleHistory(session.clientId, "", 1));
-    // els.each(function () {
-    //   if (elementTracked(this)) {
-    //     return;
-    //   }
-    //   if (elementFinder.ignoreElement(this)) {
-    //     return;
-    //   }
-    //   var el = $(this);
-    //   var value = el[0].innerText;
-    //   el.data("togetherjsHistory", ot.SimpleHistory(session.clientId, value, 1));
-    // });
     destroyTrackers();
-    buildTrackers();
+    //be ready to receive the textModel
+    document.addEventListener("modelHere", modelReceived);
+    //Ask for the textModel
+    var event = new CustomEvent("modelNeeded", {"detail": {"msg": " "}});
+    document.dispatchEvent(event);
+    //reinitialize trackers
+    // buildTrackers();
+  }
+
+  /*
+   * Is called when the textModel is received, now we can start tracking.
+  */
+  function modelReceived(e) {
+    startOrionTracking(e.detail.model);
   }
 
   session.on("reinitialize", setInit);
@@ -8758,7 +8452,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
             setValue(el, update.value);
           }
           if (update.basis) {
-            var history = $(el).data("togetherjsHistory");
+            var history = ot.simpleHistorySingleton;
             // don't overwrite history if we're already up to date
             // (we might have outstanding queued changes we don't want to lose)
             if (!(history && history.basis === update.basis &&
@@ -8767,7 +8461,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
                   // we need to erase them to resynchronize with the peer
                   // we just asked to join.
                   history.basis !== 1)) {
-              $(el).data("togetherjsHistory", ot.SimpleHistory(session.clientId, update.value, update.basis));
+              ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, update.value, update.basis);
             }
           }
         } finally {
@@ -8846,7 +8540,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     // $(document).on("input keyup cut paste", maybeChange);
     // $(document).on("focusin", focus);
     // $(document).on("focusout", blur);
-    $(document).on("collaborateChange", maybeChange);
+    // $(document).on("collaborateChange", maybeChange);
     $(document).on("sendInitContent", sendInitContent);
     $(document).on("readyToGetContent", requestInitContent);
     $(window).on("beforeunload", session.close);
