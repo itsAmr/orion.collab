@@ -1804,6 +1804,7 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
             type: 'DELETE',
             success: function(result) {
                 location.href = '/';
+                // location.hash = '#/workspace/orionode';
             }
         });
     }
@@ -2198,8 +2199,8 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     // decide weather to show actions or not
     sendHello(false);
     //if creator switches files, session over
-    if (!session.isClient && session.currentUrl() !== TogetherJS.config.get("sessionFileUrl")) {
-        session.close();
+    if (/*!session.isClient &&*/ session.currentUrl() !== TogetherJS.config.get("sessionFileUrl")) {
+        session.close("you have navigated away from the file.");
     }
   }
 
@@ -7935,21 +7936,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     change(event);
   }
 
-  function sendInitContent(event) {
-    if (!session.isClient) {
-        // history = ot.simpleHistorySingleton;
-        var message = {
-            type: "init-content",
-            requestorID: event.originalEvent.detail.e.requestorID,
-            value: {
-                text: event.originalEvent.detail.e.text
-            }
-            // basis: history.basis
-        }
-        session.send(message);
-    }
-  }
-
   function requestInitContent() {
     if (!session.isClient) {
         return;
@@ -7962,7 +7948,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     //make sure init content is received within x seconds
     setTimeout(function() {
         if (!session.received_initContent) {
-            session.close("the file owner is not in the session.");
+            session.close("failed to receive initial content, the file owner is not in the session.");
         }
     }, session.CONTENTRECEIVE_TIMER);
 
@@ -8044,14 +8030,20 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   var OrionEditor = util.Class({
 
     trackerName: "OrionEditor",
+    modelChangedEvent: "Changed",
 
     constructor: function (model) {
       this.model = model;
       this.element = "div.textviewContent";
       assert(model);
       this._change = this._change.bind(this);
-      $(document).on("collaborateChange", this._change);
-      // $(document).on("sendInitContent", sendInitContent);
+      this.model.addEventListener(this.modelChangedEvent, this._change);
+      //if client then get the initial content
+      if (session.isClient) {
+        //requestInitContent()
+            var event = new CustomEvent("readyToGetContent", {"detail": {"e": " "}});
+            document.dispatchEvent(event);
+      }
     },
     
     tracked: function (el) {
@@ -8060,7 +8052,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     },
 
     destroy: function (el) {
-        $(document).off("collaborateChange", this._change);
+        this.model.removeEventListener(this.modelChangedEvent, this._change);
     },
     
     setContent: function(e) {
@@ -8068,10 +8060,11 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     },
 
     update: function (msg) {
-      this.model.setText(msg.value);
+      this.model.setText(msg.text);
     },
 
     init: function (update, msg) {
+        //recreate history?
       this.update(update);
     },
 
@@ -8079,7 +8072,9 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       return {
         element: this.element,
         tracker: this.trackerName,
-        value: this.model.getContent()
+        value: {
+            text: this.getContent()
+        }
       };
     },
 
@@ -8096,7 +8091,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
       sendData({
         tracker: this.trackerName,
         element: this.element,
-        value: event.originalEvent.detail.e
+        value: this.getContent()
       });
     },
 
@@ -8110,7 +8105,7 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   };
 
   OrionEditor.tracked = function (el) {
-    true;
+    return true;
   };
 
   TogetherJS.addTracker(OrionEditor, true /* skip setInit */);
@@ -8270,125 +8265,153 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   }
 
     session.hub.on("request-init-content", function (msg) {
+        session.received_initContent = true;
         console.log("initcontent requested!!!");
         if (! msg.sameUrl) {
           return;
         } else {
-            var event = new CustomEvent("getInitContent", {"detail": {"msg": msg}});
-            document.dispatchEvent(event);
+            sendInit(msg.peer.id);
         }
     });
 
     session.hub.on("init-content", function (msg) {
-        session.received_initContent = true;
-        var history = ot.simpleHistorySingleton;
-        console.log("initcontent received!!!");
         if (! msg.sameUrl || msg.requestorID !== session.clientId) {
-           return;
-        } else {
-            if (!history) {
-                ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, msg.value.text, 1);
-            } else {
-                // ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, msg.value.text, msg.basis);
-                // history.current = history.committed = msg.value.text;
-                // history.basis = msg.basis;
-                history.current = msg.value.text;
-            }
-            var event = new CustomEvent("setInitContent", {"detail" : {"msg": msg.value.text}});
-            document.dispatchEvent(event);
-            console.log("received init content: " + msg)
-            return;
+          return;
         }
+        if (initSent) {
+          // In a 3+-peer situation more than one client may init; in this case
+          // we're probably the other peer, and not the peer that needs the init
+          // A quick check to see if we should init...
+          var myAge = Date.now() - TogetherJS.pageLoaded;
+          if (msg.pageAge < myAge) {
+            // We've been around longer than the other person...
+            return;
+          }
+        }
+        // FIXME: need to figure out when to ignore inits
+        msg.updates.forEach(function (update) {
+            inRemoteUpdate = true;
+            try {
+              if (update.tracker) {
+                var tracker = getOrionTracker();
+                assert(tracker);
+                tracker.init(update.value, msg);
+              } else {
+                setValue(el, update.value);
+              }
+              if (update.basis) {
+                var history = ot.simpleHistorySingleton;
+                // don't overwrite history if we're already up to date
+                // (we might have outstanding queued changes we don't want to lose)
+                if (!(history && history.basis === update.basis &&
+                      // if history.basis is 1, the form could have lingering
+                      // edits from before togetherjs was launched.  that's too bad,
+                      // we need to erase them to resynchronize with the peer
+                      // we just asked to join.
+                      history.basis !== 1)) {
+                  ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, update.value.text, update.basis);
+                }
+              }
+            } finally {
+              session.received_initContent = true;
+              inRemoteUpdate = false;
+            }
+        });
     });
+
+  queueWhileInit = [];
 
   session.hub.on("form-update", function (msg) {
     if (! msg.sameUrl) {
       return;
-    } 
-    var tracker;
-    if (msg.tracker) {
-      tracker = getOrionTracker();
-      assert(tracker);
     }
-    var value;
-    if (msg.replace) {
-      var history = ot.simpleHistorySingleton;
-      if (!history) {
-        console.warn("form update received for uninitialized form element");
+
+    var upd = function(msg) {
+        var tracker;
+
+        if (msg.tracker) {
+          tracker = getOrionTracker();
+          assert(tracker);
+        }
+        var value;
+        if (msg.replace) {
+          var history = ot.simpleHistorySingleton;
+          if (!history) {
+            console.warn("form update received for uninitialized form element");
+            return;
+          }
+          var trackerName = null;
+          if (typeof tracker != "undefined") {
+            trackerName = tracker.trackerName;
+          }
+
+          // make a real TextReplace object.
+          msg.replace.delta = ot.TextReplace(msg.replace.delta.start,
+                                             msg.replace.delta.del,
+                                             msg.replace.delta.text);
+          // apply this change to the history
+          var curr = history.current;
+          var changed = history.commit(msg.replace);
+
+          maybeSendUpdate(msg.element, history, trackerName);
+          if (! changed) {
+            return;
+          }
+          // value = history.current;
+        } else {
+          value = msg.value;
+        }
+        inRemoteUpdate = true;
+        try {
+          if(tracker) {
+            delta = ot.TextReplace.fromChange(curr, typeof value == 'undefined' ? history.current : value);
+            tracker.setContent({msg: delta});
+            // tracker.update({text: history.current});
+          }
+        } finally {
+          inRemoteUpdate = false;
+        }
+    }
+
+    /*
+    * if the session hasn't been initialized yet,
+    * push the new changes into the queue.
+    * Once the session has been initialized, clear the queue by applying all changes,
+    * and then process the current change.
+    */
+    if (!session.received_initContent) {
+        queueWhileInit.push(msg);
         return;
-      }
-      // make a real TextReplace object.
-      msg.replace.delta = ot.TextReplace(msg.replace.delta.start,
-                                         msg.replace.delta.del,
-                                         msg.replace.delta.text);
-      // apply this change to the history
-      var curr = history.current;
-      var changed = history.commit(msg.replace);
-      var trackerName = null;
-      if (typeof tracker != "undefined") {
-        trackerName = tracker.trackerName;
-      }
-      maybeSendUpdate(msg.element, history, trackerName);
-      if (! changed) {
-        return;
-      }
-      value = history.current;
-    } else {
-      value = msg.value;
+    } else if (queueWhileInit.length > 0) {
+        while (queueWhileInit.length > 0){
+            debugger;
+            upd(queueWhileInit.shift());
+        }
     }
-    inRemoteUpdate = true;
-    try {
-      if(tracker) {
-        delta = ot.TextReplace.fromChange(curr, value);
-        tracker.setContent({msg: delta});
-      }
-    } finally {
-      inRemoteUpdate = false;
-    }
+
+    upd(msg);
   });
 
   var initSent = false;
 
-  function sendInit() {
+  function sendInit(requestorId) {
     initSent = true;
     var msg = {
-      type: "form-init",
+      type: "init-content",
       pageAge: Date.now() - TogetherJS.pageLoaded,
-      updates: []
+      updates: [],
+      requestorID: requestorId
     };
-    // var els = $("div.textviewContent:first");
-    // els.each(function () {
-    //   if (elementFinder.ignoreElement(this) || elementTracked(this) ||
-    //       suppressSync(this)) {
-    //     return;
-    //   }
-    //   var el = $(this);
-    //   var value = getValue(el);
-    //   var upd = {
-    //     element: elementFinder.elementLocation(this),
-    //     //elementType: getElementType(el), // added in 5cbb88c9a but unused
-    //     value: value
-    //   };
-    //   if (isText(el)) {
-    //     var history = ot.simpleHistorySingleton;
-    //     if (history) {
-    //       upd.value = history.committed;
-    //       upd.basis = history.basis;
-    //     }
-    //   }
-    //   msg.updates.push(upd);
-    // });
-    // liveTrackers.forEach(function (tracker) {
-    //   var init = tracker.makeInit();
-    //   assert(tracker.tracked(init.element));
-    //   var history = ot.simpleHistorySingleton;
-    //   if (history) {
-    //     init.value = history.committed;
-    //     init.basis = history.basis;
-    //   }
-    //   init.element = elementFinder.elementLocation($(init.element));
-    //   msg.updates.push(init);
-    // });
+    var tracker = getOrionTracker();
+    var init = tracker.makeInit();
+    assert(tracker);
+    var history = ot.simpleHistorySingleton;
+    if (history) {
+        init.value.text = history.committed;
+        init.basis = history.basis;
+    }
+    msg.updates.push(init);
+
     if (msg.updates.length) {
       session.send(msg);
     }
@@ -8417,58 +8440,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   session.on("ui-ready", setInit);
 
   session.on("close", destroyTrackers);
-
-  session.hub.on("form-init", function (msg) {
-    if (! msg.sameUrl) {
-      return;
-    }
-    if (initSent) {
-      // In a 3+-peer situation more than one client may init; in this case
-      // we're probably the other peer, and not the peer that needs the init
-      // A quick check to see if we should init...
-      var myAge = Date.now() - TogetherJS.pageLoaded;
-      if (msg.pageAge < myAge) {
-        // We've been around longer than the other person...
-        return;
-      }
-    }
-    // FIXME: need to figure out when to ignore inits
-    msg.updates.forEach(function (update) {
-      var el;
-      try {
-        el = elementFinder.findElement(update.element);
-      } catch (e) {
-        /* skip missing element */
-        console.warn(e);
-        return;
-      }
-        inRemoteUpdate = true;
-        try {
-          if (update.tracker) {
-            var tracker = getTracker(el, update.tracker);
-            assert(tracker);
-            tracker.init(update, msg);
-          } else {
-            setValue(el, update.value);
-          }
-          if (update.basis) {
-            var history = ot.simpleHistorySingleton;
-            // don't overwrite history if we're already up to date
-            // (we might have outstanding queued changes we don't want to lose)
-            if (!(history && history.basis === update.basis &&
-                  // if history.basis is 1, the form could have lingering
-                  // edits from before togetherjs was launched.  that's too bad,
-                  // we need to erase them to resynchronize with the peer
-                  // we just asked to join.
-                  history.basis !== 1)) {
-              ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, update.value, update.basis);
-            }
-          }
-        } finally {
-          inRemoteUpdate = false;
-        }
-    });
-  });
 
   var lastFocus = null;
 
@@ -8538,10 +8509,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     // note that textInput, keydown, and keypress aren't appropriate events
     // to watch, since they fire *before* the element's value changes.
     // $(document).on("input keyup cut paste", maybeChange);
-    // $(document).on("focusin", focus);
-    // $(document).on("focusout", blur);
-    // $(document).on("collaborateChange", maybeChange);
-    $(document).on("sendInitContent", sendInitContent);
     $(document).on("readyToGetContent", requestInitContent);
     $(window).on("beforeunload", session.close);
   });
@@ -8549,10 +8516,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   session.on("close", function () {
     // $(document).off("change", change);
     // $(document).off("input keyup cut paste", maybeChange);
-    // $(document).off("focusin", focus);
-    // $(document).off("focusout", blur);
-    // $(document).off("collaborateChange", maybeChange);
-    $(document).off("sendInitContent", sendInitContent);
     $(document).off("readyToGetContent", requestInitContent);
     $(window).off("beforeunload", session.close);
   });
@@ -8560,7 +8523,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   session.hub.on("hello", function (msg) {
     if (msg.sameUrl) {
       setTimeout(function () {
-	sendInit();
         if (lastFocus) {
           session.send({type: "form-focus", element: elementFinder.elementLocation(lastFocus)});
         }

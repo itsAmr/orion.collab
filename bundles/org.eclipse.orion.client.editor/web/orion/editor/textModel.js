@@ -500,11 +500,10 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 		 * @param {String} [text=""] the new text.
 		 * @param {Number} [start=0] the zero based start offset of text range.
 		 * @param {Number} [end=char count] the zero based end offset of text range.
-		 * @param {Boolean} Whether or not the change comes from another user in a collaborative session.
 		 *
 		 * @see orion.editor.TextModel#getText
 		 */
-		setText: function(text, start, end, isUpdate = false) {
+		setText: function(text, start, end) {
 			if (text === undefined) { text = ""; }
 			if (start === undefined) { start = 0; }
 			if (end === undefined) { end = this.getCharCount(); }
@@ -630,11 +629,6 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 				addedLineCount: addedLineCount
 			};
 			this.onChanged(modelChangedEvent);
-
-			if (!isUpdate && this.startCollab) {
-				var event = new CustomEvent("collaborateChange", {"detail": {"e": this.getText()}});
-				document.dispatchEvent(event);
-			}
 		},
 		/**
 		 * Hooks the collaboration events to the textModel.
@@ -643,21 +637,11 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 		 * </p>
 		 */
 		_initCollaboration: function() {
-			var event = new CustomEvent("readyToGetContent", {"detail": {"e": " "}});
-			document.dispatchEvent(event);
+			//For receivers, or page reload. The model is sent as soon as it is ready.
+		    var event = new CustomEvent("modelHere", {"detail": {"model": this}});
+		    document.dispatchEvent(event);
 			that = this;
-			document.addEventListener('getInitContent', function(e) {
-				that.startCollab = true;
-				var txt = that.getText();
-				var event = new CustomEvent("sendInitContent", {"detail": {"e": {text: txt, requestorID: e.detail.msg.peer.id}}});
-				document.dispatchEvent(event);
-			}, true);
-			document.addEventListener('setInitContent', function(e) {
-				that.setText(e.detail.msg);
-				that.startCollab = true;
-				var event = new CustomEvent("modelHere", {"detail": {"model": that}});
-				document.dispatchEvent(event);
-			}, true);
+			//when the session is started manually, the model is sent through this.
 			document.addEventListener('modelNeeded', function(e) {
 			    var event = new CustomEvent("modelHere", {"detail": {"model": that}});
 			    document.dispatchEvent(event);
