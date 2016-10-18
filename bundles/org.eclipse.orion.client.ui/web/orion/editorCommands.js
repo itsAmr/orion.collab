@@ -957,28 +957,7 @@ define([
 					return editor && editor.installed && formatter && formatter.isVisible();
 				},
 				callback: function(data) {
-					if (!TogetherJS.running) {
-						TogetherJS.config("ignoreMessages", ["cursor-update", "scroll-update", "keydown", "form-focus"]);
-						TogetherJS.config("getUserName", 
-							function() {
-								return new Promise(function(resolve, reject) {
-									$.ajax({
-										url: '/login',
-										type: 'POST',
-										success: function(result) {
-											resolve(result.UserName);
-										},
-										fail: function() {
-											reject();
-										}
-									});
-								});
-							}
-						);
-						TogetherJS(this);
-					} else {
-						TogetherJS(this);
-					}
+					TogetherJS(this);
 				}
 			});
 			this.commandService.addCommand(collaborateCommand);
