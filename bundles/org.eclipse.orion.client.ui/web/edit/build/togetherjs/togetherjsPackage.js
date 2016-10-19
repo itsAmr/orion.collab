@@ -1761,7 +1761,11 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     }
     hash = hash.replace(/&?togetherjs-[a-zA-Z0-9]+/, "");
     hash = hash || "#";
-    return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId;
+    if (!session.isClient) {
+        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId;
+    } else {
+        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(28, hash.length) + "&togetherjs=" + session.shareId;
+    }
   };
 
   session.recordUrl = function () {
@@ -8265,7 +8269,6 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   }
 
     session.hub.on("request-init-content", function (msg) {
-        session.received_initContent = true;
         console.log("initcontent requested!!!");
         if (! msg.sameUrl) {
           return;
@@ -8379,13 +8382,17 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
     * Once the session has been initialized, clear the queue by applying all changes,
     * and then process the current change.
     */
-    if (!session.received_initContent) {
+    if (session.isClient && !session.received_initContent) {
+        console.log("received change while initializing");
         queueWhileInit.push(msg);
         return;
     } else if (queueWhileInit.length > 0) {
         while (queueWhileInit.length > 0){
-            debugger;
-            upd(queueWhileInit.shift());
+            if (queueWhileInit[0].replace.basis < ot.simpleHistorySingleton.basis) {
+                queueWhileInit.shift();
+            } else {
+                upd(queueWhileInit.shift());
+            }
         }
     }
 
@@ -8558,7 +8565,7 @@ define('startup',["util", "require", "jquery", "windowing", "storage"], function
     "browserBroken",
     "browserUnsupported",
     "sessionIntro",
-    "walkthrough",
+    /*"walkthrough",*/
     // Look in the share() below if you add anything after here:
     "share"
     ];
