@@ -923,6 +923,14 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					if (tooltip) { tooltip.hide(); }
 					that._updateCursorStatus();
 					that._highlightCurrentLine(e.newValue, e.oldValue);
+					if (TogetherJS.running) {
+						var currLine = this.getLineAtOffset(e.newValue.start);
+						if (currLine !== this.getLineAtOffset(e.oldValue.start)) {
+							//send a line change if the line has changed.
+						    var event = new CustomEvent("changedLine", {"detail": {"change": currLine}});
+						    document.dispatchEvent(event);
+						}
+					}
 				}
 			};
 			textView.addEventListener("ModelChanged", this._listener.onModelChanged); //$NON-NLS-0$
@@ -973,6 +981,59 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 				}
 			};
 
+			var collabPeers = {};
+
+			var editCollabAnnotation = function(e) {
+				var annotationModel = this.getAnnotationModel();
+				var line = e.detail.line
+				var viewModel = this.getModel();
+				var annotationModel = this.getAnnotationModel();
+				var lineStart = editor.mapOffset(viewModel.getLineStart(line));
+				if (lineStart == -1) return;
+				var ann = AT.createAnnotation(AT.ANNOTATION_COLLAB_LINE_CHANGED, lineStart, lineStart, e.detail.name + " is editing");
+				var peerId = e.detail.peerId;
+
+				/*if peer isn't being tracked yet, start tracking
+				* else replace previous annotation
+				*/
+				if (!(peerId in collabPeers)) {
+					collabPeers[peerId] = {
+						'annotation': ann,
+						'line': line
+					};
+					annotationModel.addAnnotation(ann);
+				} else {
+					var currAnn = collabPeers[peerId].annotation;
+					if (ann.start == currAnn.start) return;
+					annotationModel.replaceAnnotations([currAnn], [ann]);
+					collabPeers[peerId].annotation = ann;
+				}
+			};
+
+			var destroyCollabAnnotations = function(e) {
+				var annotationModel = this.getAnnotationModel();
+				var currAnn = null;
+
+				/*If a peer is specified, just remove their annotation
+				* Else remove all peers' annotations.
+				*/
+				if (e.detail.hasOwnProperty('peerId')) {
+					//remove that users annotation
+					currAnn = collabPeers[e.detail.peerId].annotation;
+					annotationModel.removeAnnotation(currAnn);
+					delete collabPeers[e.detail.peerId];
+				} else {
+					//the session has ended remove everyone's annotation
+					for (var key in collabPeers) {
+						if (collabPeers.hasOwnProperty(key)) {
+							currAnn = collabPeers[key].annotation;
+							annotationModel.removeAnnotation(currAnn);
+						}
+					}
+					collabPeers = {};
+				}
+			};
+
 			// Create rulers, annotation model and styler
 			if (this._annotationFactory) {
 				var textModel = textView.getModel();
@@ -1001,6 +1062,9 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 				var ruler = this._annotationRuler = rulers.annotationRuler;
 				if (ruler) {
 					ruler.onDblClick = addRemoveBookmark;
+					document.addEventListener("collabAnnotation", editCollabAnnotation.bind(this));
+					document.addEventListener("destroyCollabAnnotations", destroyCollabAnnotations.bind(this));
+
 					ruler.setMultiAnnotationOverlay({html: "<div class='annotationHTML overlay'></div>"}); //$NON-NLS-0$
 					ruler.addAnnotationType(AT.ANNOTATION_ERROR);
 					ruler.addAnnotationType(AT.ANNOTATION_WARNING);
@@ -1009,6 +1073,7 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_ADDED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_DELETED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_MODIFIED);
+					ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED);
 				}
 				this.setAnnotationRulerVisible(this._annotationRulerVisible || this._annotationRulerVisible === undefined, true);
 
@@ -1030,7 +1095,7 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_ADDED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_DELETED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_MODIFIED);
-
+					ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED);
 				}
 				this.setOverviewRulerVisible(this._overviewRulerVisible || this._overviewRulerVisible === undefined, true);
 			}
