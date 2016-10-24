@@ -925,11 +925,13 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					that._highlightCurrentLine(e.newValue, e.oldValue);
 					if (TogetherJS.running) {
 						var currLine = this.getLineAtOffset(e.newValue.start);
-						if (currLine !== this.getLineAtOffset(e.oldValue.start)) {
+						// if (currLine !== this.getLineAtOffset(e.oldValue.start) 
+						// 	|| currLine == this.getModel().getLineCount()-1
+						// 	|| currLine == 0) {
 							//send a line change if the line has changed.
 						    var event = new CustomEvent("changedLine", {"detail": {"change": currLine}});
 						    document.dispatchEvent(event);
-						}
+						// }
 					}
 				}
 			};
@@ -991,6 +993,7 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 				var lineStart = editor.mapOffset(viewModel.getLineStart(line));
 				if (lineStart == -1) return;
 				var ann = AT.createAnnotation(AT.ANNOTATION_COLLAB_LINE_CHANGED, lineStart, lineStart, e.detail.name + " is editing");
+				ann.html = ann.html.substring(0, ann.html.indexOf('></div>')) + " style='background-color:" + e.detail.color + "'><b>" + e.detail.name.substring(0,2) + "</b></div>";
 				var peerId = e.detail.peerId;
 
 				/*if peer isn't being tracked yet, start tracking
@@ -1073,7 +1076,7 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_ADDED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_DELETED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_MODIFIED);
-					ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED);
+					ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED, 1);
 				}
 				this.setAnnotationRulerVisible(this._annotationRulerVisible || this._annotationRulerVisible === undefined, true);
 
@@ -1095,7 +1098,7 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_ADDED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_DELETED);
 					ruler.addAnnotationType(AT.ANNOTATION_DIFF_MODIFIED);
-					ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED);
+					ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED, 1);
 				}
 				this.setOverviewRulerVisible(this._overviewRulerVisible || this._overviewRulerVisible === undefined, true);
 			}
