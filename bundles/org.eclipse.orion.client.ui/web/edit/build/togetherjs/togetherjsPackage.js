@@ -2149,6 +2149,8 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
               }
               peers._SelfLoaded.then(function () {
                 sendHello(false);
+                //send init position
+                lineChanged({'detail':{'line': 0}});
               });
               TogetherJS.emit("ready");
             });
@@ -2857,20 +2859,43 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
    * Line tracking stuff
    *
   **/
+  var myLine = 0;
+
   lineChanged = function (e) {
-    //the function is bound to the peers class
+    var line = e.detail.line;
+
+    if (e.detail.hasOwnProperty('offset')) {
+        var endLine = e.detail.endLine;
+        var lineStartOffset = e.detail.lineStartOffset;
+        var offset = e.detail.offset;
+
+        //decide whether or not it is worth sending (if line has changed or needs updating).
+        if (line !== myLine
+            || line == endLine
+            || line == 0) {
+            //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
+            if (line == endLine && offset == lineStartOffset) {
+                line -= 1;
+            }
+        } else {
+            return;
+        }
+    }
+
+    myLine = line;
     var msg = {
-      type: "line-change",
-      line: e.detail.change,
-      name: this.Self.name,
-      color: this.Self.color
+      'type': "line-change",
+      'line': myLine,
+      'name': this.Self.name,
+      'color': this.Self.color
     };
 
     session.send(msg);
   }
 
-  session.hub.on("line-change", function (msg) {
+  lineChanged = lineChanged.bind(peers);
 
+  session.hub.on("line-change", function (msg) {
     if (! msg.sameUrl) {
       return;
     } else {
@@ -2882,6 +2907,18 @@ define('peers',["util", "session", "storage", "require", "templates"], function 
             }
         });
         document.dispatchEvent(event);
+    }
+  });
+
+  session.hub.on("request-line", function (msg) {
+    if (! msg.sameUrl) {
+      return;
+    } else {
+        lineChanged({
+            'detail': {
+                'line': myLine
+            }
+        });
     }
   });
   /** END OF LINE TRACKING STUFF **/
@@ -7938,6 +7975,16 @@ define('forms',["jquery", "util", "session", "elementFinder", "eventMaker", "tem
   */
   function modelReceived(e) {
     startOrionTracking(e.detail.model);
+    requestLineInit();
+  }
+
+  function requestLineInit() {
+    //get the line positions of all peers
+    var msg  = {
+        type: 'request-line'
+    };
+
+    session.send(msg);
   }
 
   session.on("reinitialize", setInit);

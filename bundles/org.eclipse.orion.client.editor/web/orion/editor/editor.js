@@ -925,13 +925,17 @@ define("orion/editor/editor", [ //$NON-NLS-0$
 					that._highlightCurrentLine(e.newValue, e.oldValue);
 					if (TogetherJS.running) {
 						var currLine = this.getLineAtOffset(e.newValue.start);
-						// if (currLine !== this.getLineAtOffset(e.oldValue.start) 
-						// 	|| currLine == this.getModel().getLineCount()-1
-						// 	|| currLine == 0) {
-							//send a line change if the line has changed.
-						    var event = new CustomEvent("changedLine", {"detail": {"change": currLine}});
-						    document.dispatchEvent(event);
-						// }
+						var lastLine = this.getModel().getLineCount()-1;
+						var lineStartOffset = this.getLineStart(currLine);
+						var offset = e.newValue.start;
+
+						var event = new CustomEvent("changedLine", {"detail": {
+							"line": currLine,
+							"endLine": lastLine,
+							"lineStartOffset": lineStartOffset,
+							"offset": offset
+					    }});
+					    document.dispatchEvent(event);
 					}
 				}
 			};
