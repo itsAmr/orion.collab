@@ -27,8 +27,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
   var COLLAPSE_MESSAGE_LIMIT = 5000;
 
   var COLORS = [
-    "#8A2BE2", "#7FFF00", "#DC143C", "#00FFFF", "#8FBC8F", "#FF8C00", "#FF00FF",
-    "#FFD700", "#F08080", "#90EE90", "#FF6347"];
+    "#8A2BE2", "#DC143C", "#E67E00", "#FF00FF", "#00CC00", "#999966", "#669999",
+    "#FF6347", "#006AFF", "#000000"];
 
   // This would be a circular import, but we just need the chat module sometime
   // after everything is loaded, and this is sure to complete by that time:

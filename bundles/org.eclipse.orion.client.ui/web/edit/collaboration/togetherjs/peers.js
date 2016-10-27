@@ -592,10 +592,8 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         var offset = e.detail.offset;
 
         //decide whether or not it is worth sending (if line has changed or needs updating).
-        if (line !== myLine
-            || line == endLine
-            || line == 0) {
-            //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
+        if (line !== myLine || line == endLine || line == 0) {
+        //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
             if (line == endLine && offset == lineStartOffset) {
                 line -= 1;
             }

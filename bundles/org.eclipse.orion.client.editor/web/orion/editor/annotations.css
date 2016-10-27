@@ -175,6 +175,7 @@
 .annotationHTML.collabLineChanged {
 	text-align: center;
 	border-radius: 50%;
+	font-size:11px;
 }
 
 /* Styles for the overview ruler  */
