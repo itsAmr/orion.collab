@@ -49,7 +49,7 @@ function startServer(options) {
 			//this should be in checkAuthenticated but not sure side effects on ajax calls
 			if (!req.user) {
 				var fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
-				fullUrl = '/mixloginstatic/landing.html?redirect=' + encodeURIComponent(fullUrl) + '&key=FORMOAuthUser';
+				fullUrl = '/mixloginstatic/LoginWindow.html?redirect=' + encodeURIComponent(fullUrl) + '&key=FORMOAuthUser';
 				res.redirect(fullUrl);
 			} else {
 				req.user.workspaceDir = options.workspaceDir + (req.user.workspace ? "/" + req.user.workspace : "");
