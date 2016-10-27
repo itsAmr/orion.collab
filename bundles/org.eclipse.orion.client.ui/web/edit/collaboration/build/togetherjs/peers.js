@@ -604,6 +604,12 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
         }
     }
 
+    if (!this.Self.name && typeof e.fetchNameNum == 'undefined') {
+      e.fetchNameNum = true;
+      setTimeout(function() {lineChanged(e);}, 4000);
+      return;
+    }
+
     myLine = line;
     var msg = {
       'type': "line-change",
