@@ -52,7 +52,7 @@ define(["jquery", "util", "peers", "session"], function ($, util, peers, session
     win = $(win);
     assert(bound.length, "Cannot find binding:", bound.selector, "from:", win.selector);
     // FIXME: hardcoding
-    var ifacePos = "right";
+    var ifacePos = "left";
     //var ifacePos = panelPosition();
     var boundPos = bound.offset();
     boundPos.height = bound.height();

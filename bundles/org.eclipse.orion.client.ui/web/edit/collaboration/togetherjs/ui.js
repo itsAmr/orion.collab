@@ -111,6 +111,65 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
     var container = ui.container = $(templates("interface"));
     assert(container.length);
     $("body").append(container);
+
+    //create the UI for side menu, but just append.
+    (function() {
+      var sideMenuList = document.createElement('div');
+      sideMenuList.setAttribute('id', 'togetherSide');
+      sideMenuList.appendChild(document.createElement('hr'));
+      for (i=0; i < 4; i ++) {
+        var listItem = document.createElement('li'); //$NON-NLS-0$
+        listItem.classList.add("sideMenuItem"); //$NON-NLS-0$
+        listItem.classList.add("sideMenu-notification"); //$NON-NLS-0$
+        var anchor = document.createElement("a"); //$NON-NLS-0$
+        anchor.classList.add("submenu-trigger"); // styling
+        var img = document.createElement("img");
+        img.width = "25";
+        img.height = "25";
+        switch (i) {
+          case 0: 
+            listItem.setAttribute('id', 'togetherjs-menu-end');
+            img.src = "http://localhost:8081/edit/collaboration/togetherjs/images/button-end-session.png";
+            break;
+          case 1: 
+            listItem.setAttribute('id', 'togetherjs-profile-button');
+            img.src = "http://localhost:8081/edit/collaboration/togetherjs/images/default-avatar.png";
+            break;
+          case 2:
+            listItem.setAttribute('id', 'togetherjs-share-button');
+            img.src = "http://localhost:8081/edit/collaboration/togetherjs/images/button-share.png";
+            break;
+          case 3:
+            listItem.setAttribute('id', 'togetherjs-chat-button');
+            img.src = "http://localhost:8081/edit/collaboration/togetherjs/images/button-chat.png";
+            break;
+        }
+        anchor.appendChild(img);
+        listItem.appendChild(anchor);
+        sideMenuList.appendChild(listItem);
+      }
+      sideMenuList.style.display = 'none';
+      var participantsList = document.createElement('div');
+      participantsList.setAttribute('id', 'togetherjs-dock-participants');
+      sideMenuList.appendChild(participantsList);
+      sideMenuList.appendChild(document.createElement('hr'));
+      $("body").append(sideMenuList);
+
+      dockSideMenu = function() {
+        if (!document.getElementById('sideMenu').childNodes[2]) {
+          setTimeout(function() {dockSideMenu()}, 2000);
+          return;
+        } else {
+          var menu = document.getElementById('togetherSide');
+          document.getElementById('sideMenu').childNodes[2].appendChild(menu);
+          menu.style.display = 'block';
+          menu.style.bottom = 0;
+          menu.style.position = 'absolute';
+        }
+      }
+      dockSideMenu();
+    })();
+
     fixupAvatars(container);
     if (session.firstRun && TogetherJS.startTarget) {
       // Time at which the UI will be fully ready:
@@ -814,7 +873,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
   }
 
   session.on("close", function () {
-
+    $('#togetherSide').remove();
     if($.browser.mobile) {
       // remove bg overlay
       //$(".overlay").remove();
@@ -881,7 +940,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       el.attr("data-person", attrs.peer.id)
         .attr("data-date", date)
         .attr("data-message-id", attrs.messageId);
-      ui.chat.add(el, attrs.messageId, attrs.notify);
+      ui.chat.add(el, attrs.messageId, attrs.notify ? 2000 : attrs.notify);
     },
 
     joinedSession: function (attrs) {
@@ -1241,6 +1300,19 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
 
       }
 
+      function styleIt(el, peer) {
+        el.addClass("sideMenuItem"); //$NON-NLS-0$
+        el.addClass("sideMenu-notification"); //$NON-NLS-0$
+        var anchor = document.createElement("a"); //$NON-NLS-0$
+        anchor.classList.add("submenu-trigger"); // styling
+        var img = document.createElement("img");
+        img.width = "25";
+        img.height = "25";
+        img.src = "http://localhost:8081/edit/collaboration/togetherjs/images/default-avatar.png";
+        anchor.appendChild(img);
+        el.append(anchor);
+        return el;
+      }
 
       if (this.dockElement) {
         return;
@@ -1249,7 +1321,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         peer: this.peer
       });
       this.dockElement.attr("id", this.peer.className("togetherjs-dock-element-"));
-      ui.container.find("#togetherjs-dock-participants").append(this.dockElement);
+      this.dockElement = styleIt(this.dockElement, this.peer);
+      $(document).find("#togetherjs-dock-participants").append(this.dockElement);
       this.dockElement.find(".togetherjs-person").animateDockEntry();
       adjustDockSize(1);
       this.detailElement = templating.sub("participant-window", {

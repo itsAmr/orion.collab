@@ -29,7 +29,7 @@
 // Extra padding on the edge of the screen:
 @side-padding: 0;
 // Background color of most elements:
-@background-color: #0095DD;
+@background-color: #26343F;
 @window-background-color: #ffffff;
 @window-color: #000;
 @text-color: #000;
@@ -51,12 +51,12 @@
   font-weight: normal;
 
   a {
-    color: #0095DD;
+    color: @background-color;
     text-decoration: none;
   }
 
   a:hover {
-    color: #0095DD;
+    color: @background-color;
     text-decoration: underline;
   }
 
@@ -110,7 +110,7 @@ button:disabled {
 }
 
 button[disabled]:hover {
-  background:#0194DB;
+  background:@background-color;
 }
 
 .togetherjs-default {
@@ -128,7 +128,7 @@ button[disabled]:hover {
 
 .togetherjs-primary {
   .button-style;
-  background:#0194DB;
+  background:@background-color;
   color: #fff;
   &.togetherjs-follow {
     cursor: pointer;
@@ -252,7 +252,7 @@ input.togetherjs-upload-avatar {
     margin: 0 -7px 0 -7px;
     padding: 10px 4px 5px 30px;
     height: (@button-size + 8)/2;
-    background: #0095DD;
+    background: @background-color;
     border-radius: 4px 4px 0 0;
     position: relative;
     border-bottom:1px solid #0071A7;
@@ -268,7 +268,7 @@ input.togetherjs-upload-avatar {
     font-family: Monaco, sans-serif;
     margin: 7px 0px;
     &:focus {
-      border:1px solid #0095DD;
+      border:1px solid @background-color;
     }
   }
 
@@ -290,7 +290,7 @@ input.togetherjs-upload-avatar {
     border-top-right-radius:4px;
     &:hover {
       background-image:url('./images/icon-close-active.png');
-      background-color:rgba(0,0,0,0.1);
+      // background-color:rgba(0,0,0,0.1);
     }
   }
 
@@ -352,7 +352,7 @@ input.togetherjs-upload-avatar {
     background-image: url('./images/button-mic.png');
     &:hover {
       background-image: url('./images/button-mic-active.png');
-      /*background-color:#0095dd;*/
+      /*background-color:@background-color;*/
       /*cursor: default;*/
     }
   }
@@ -388,7 +388,7 @@ input.togetherjs-upload-avatar {
   }
 
   .togetherjs-subtitle {
-    background:#0195DD;
+    background:@background-color;
     width:280px;
     height:17px;
     border-bottom:1px solid #0071A7;
@@ -429,7 +429,7 @@ input.togetherjs-upload-avatar {
     /*box-shadow: inset 0 2px 2px rgba(0,0,0,0.1);*/
     font-family: openSansLight, Helvetica, sans-serif;
     &:focus {
-      border:1px solid #0095DD;
+      border:1px solid @background-color;
     }
   }
 
@@ -546,7 +546,7 @@ input.togetherjs-upload-avatar {
     margin: 0 -1px 0 -1px;
     padding: 10px 4px 5px 30px;
     height: 24px;
-    background: #0095DD;
+    background: @background-color;
     border-radius: 4px 4px 0 0;
     position: relative;
     border-bottom: 1px solid #0071A7;
@@ -966,12 +966,12 @@ input.togetherjs-upload-avatar {
     box-shadow: inset 0 2px 2px rgba(0,0,0,0.1);
     margin: -2px 0px;
     &:focus {
-      border:1px solid #0095DD;
+      border:1px solid @background-color;
     }
   }
 
   .togetherjs-self-name:focus {
-    border-bottom: 1px solid #0095DD;
+    border-bottom: 1px solid @background-color;
   }
 
 }
@@ -1637,22 +1637,22 @@ section.togetherjs-buttons .togetherjs-same-url {
 
 @-webkit-keyframes togetherjs-color-pulse {
   0% {box-shadow: none;}
-  50% {box-shadow: inset 0 0 2px #0095dd;}
+  50% {box-shadow: inset 0 0 2px @background-color;}
   100% {box-shadow: none;}
 }
 @-moz-keyframes togetherjs-color-pulse {
   0% {box-shadow: none;}
-  50% {box-shadow: inset 0 0 2px #0095dd;}
+  50% {box-shadow: inset 0 0 2px @background-color;}
   100% {box-shadow: none;}
 }
 @-o-keyframes togetherjs-color-pulse {
   0% {box-shadow: none;}
-  50% {box-shadow: inset 0 0 2px #0095dd;}
+  50% {box-shadow: inset 0 0 2px @background-color;}
   100% {box-shadow: none;}
 }
 @keyframes togetherjs-color-pulse {
   0% {box-shadow: none;}
-  50% {box-shadow: inset 0 0 2px #0095dd;}
+  50% {box-shadow: inset 0 0 2px @background-color;}
   100% {box-shadow: none;}
 }
 .togetherjs-color-pulse {
@@ -1664,22 +1664,22 @@ section.togetherjs-buttons .togetherjs-same-url {
 
 @-webkit-keyframes togetherjs-color-alert {
   0% {box-shadow: none;}
-  50% {box-shadow: 0 0 5px #0095dd;}
+  50% {box-shadow: 0 0 5px @background-color;}
   100% {box-shadow: none;}
 }
 @-moz-keyframes togetherjs-color-alert {
   0% {box-shadow: none;}
-  50% {box-shadow: 0 0 5px #0095dd;}
+  50% {box-shadow: 0 0 5px @background-color;}
   100% {box-shadow: none;}
 }
 @-o-keyframes togetherjs-color-alert {
   0% {box-shadow: none;}
-  50% {box-shadow: 0 0 5px #0095dd;}
+  50% {box-shadow: 0 0 5px @background-color;}
   100% {box-shadow: none;}
 }
 @keyframes togetherjs-color-alert {
   0% {box-shadow: none;}
-  50% {box-shadow: 0 0 5px #0095dd;}
+  50% {box-shadow: 0 0 5px @background-color;}
   100% {box-shadow: none;}
 }
 .togetherjs-color-alert {

@@ -8,7 +8,7 @@
 <div id="togetherjs-container" class="togetherjs">
 
   <!-- This is the main set of buttons: -->
-  <div id="togetherjs-dock" class="togetherjs-dock-right">
+  <div id="togetherjs-dock" class="togetherjs-dock-right" style="display: none;">
     <div id="togetherjs-dock-anchor" title="{{ gettext('Move the dock') }}">
       <span id="togetherjs-dock-anchor-horizontal">
         <img src="http://localhost:8080/togetherjs/images/icn-handle-circle@2x.png" alt="drag">
@@ -19,13 +19,13 @@
     </div>
     <div id="togetherjs-buttons">
       <div style="display: none">
-        <button id="togetherjs-template-dock-person" class="togetherjs-button togetherjs-dock-person">
-          <div class="togetherjs-tooltip togetherjs-dock-person-tooltip">
+        <li id="togetherjs-template-dock-person" class="togetherjs-button togetherjs-dock-person">
+<!--           <div class="togetherjs-tooltip togetherjs-dock-person-tooltip">
             <span class="togetherjs-person-name"></span>
             <span class="togetherjs-person-tooltip-arrow-r"></span>
-          </div>
-          <div class="togetherjs-person togetherjs-person-status-overlay"></div>
-        </button>
+          </div> -->
+          <!-- <div class="togetherjs-person togetherjs-person-status-overlay"></div> -->
+        </li>
       </div>
       <!-- <button id="togetherjs-menu-end" class="togetherjs-button"> -->
           <!-- <div ><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt="">  -->
@@ -36,7 +36,7 @@
         <div class="togetherjs-person togetherjs-person-self"></div>
         <div id="togetherjs-profile-arrow"></div>
       </button>
-      <button id="togetherjs-share-button" class="togetherjs-button" title="{{ gettext('Add a friend') }}"></button>
+<!--       <button id="togetherjs-share-button" class="togetherjs-button" title="{{ gettext('Add a friend') }}"></button> -->
       <button id="togetherjs-audio-button" class="togetherjs-button" title="{{ gettext('Turn on microphone')}}">
         <span id="togetherjs-audio-unavailable" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set">
         </span>
@@ -53,28 +53,9 @@
         <span id="togetherjs-audio-error" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
         </span>
       </button>
-      <button id="togetherjs-chat-button" class="togetherjs-button" title="{{ gettext('Chat') }}"></button>
-      <div id="togetherjs-dock-participants"></div>
+<!--       <button id="togetherjs-chat-button" class="togetherjs-button" title="{{ gettext('Chat') }}"></button>
+ -->      <!-- <div id="togetherjs-dock-participants"></div> -->
     </div>
-  </div>
-
-  <!-- The window for editing the avatar: -->
-  <div id="togetherjs-avatar-edit" class="togetherjs-modal"
-       style="display: none">
-    <header> {{ gettext('Update avatar') }} </header>
-    <section>
-      <div class="togetherjs-avatar-preview togetherjs-person togetherjs-person-self"></div>
-      <div id="togetherjs-avatar-buttons">
-        <input type="file" class="togetherjs-upload-avatar">
-        <!--<button id="togetherjs-upload-avatar" class="togetherjs-primary">Upload a picture</button>-->
-        <!--<button id="togetherjs-camera-avatar" class="togetherjs-default">Take a picture</button>-->
-      </div>
-    </section>
-    <section class="togetherjs-buttons">
-      <button class="togetherjs-cancel togetherjs-dismiss">{{ gettext('Cancel') }}</button>
-      <span class="togetherjs-alt-text">{{ gettext('or') }}</span>
-      <button class="togetherjs-avatar-save togetherjs-primary">{{ gettext('Save') }}</button>
-    </section>
   </div>
 
   <!-- The window for sharing the link: -->
@@ -250,57 +231,6 @@
     </section>
     <section id="togetherjs-chat-input-box">
       <textarea id="togetherjs-chat-input" placeholder="{{ gettext('Type your message here') }}"></textarea>
-    </section>
-  </div>
-
-  <!-- this is a kind of warning popped up when you (successfully) start RTC: -->
-  <div id="togetherjs-rtc-info" class="togetherjs-window"
-       data-bind-to="#togetherjs-audio-button"
-       style="display: none">
-
-    <header> {{ gettext('Audio Chat') }} </header>
-    <section>
-      <p>
-        {{ gettext('Activate your <strong>browser microphone</strong> near your URL bar above.') }}
-      </p>
-      <p>
-        {{ gettext('Talking on your microphone through your web browser is an experimental feature.') }}
-      </p>
-      <p>
-        {{ gettext('Read more about Audio Chat') }} <a href="https://github.com/mozilla/togetherjs/wiki/About-Audio-Chat-and-WebRTC" target="_blank">{{ gettext('here') }}</a>.
-      </p>
-    </section>
-
-    <section class="togetherjs-buttons">
-      <label for="togetherjs-rtc-info-dismiss" style="display: inline;">
-        <input class="togetherjs-dont-show-again" id="togetherjs-rtc-info-dismiss" type="checkbox">
-        {{ gettext('Don\'t show again.') }}
-      </label>
-      <button class="togetherjs-default togetherjs-dismiss" type="button">{{ gettext('Close') }}</button>
-    </section>
-  </div>
-
-  <!-- this is popped up when you hit the audio button, but RTC isn't
-  supported: -->
-  <div id="togetherjs-rtc-not-supported" class="togetherjs-window"
-       data-bind-to="#togetherjs-audio-button"
-       style="display: none">
-    <header> {{ gettext('Audio Chat') }} </header>
-
-    <section>
-      <p>{{ gettext('Audio chat requires you to use a <a href=\'https://github.com/mozilla/togetherjs/wiki/About-Audio-Chat-and-WebRTC\' target=\'_blank\'>newer browser</a>!') }}</p>
-      <p>
-        {{ gettext('Live audio chat requires a newer (or different) browser than you\'re using.') }}
-      </p>
-      <p>
-        {{ gettext('See <a href=\'https://github.com/mozilla/togetherjs/wiki/About-Audio-Chat-and-WebRTC\' target=\'_blank\'>this page</a>for more information and a list of supported browsers.') }}
-      </p>
-    </section>
-
-    <section class="togetherjs-buttons">
-      <div class="togetherjs-rtc-dialog-btn">
-        <button class="togetherjs-default togetherjs-dismiss" type="button">{{ gettext('Close') }}</button>
-      </div>
     </section>
   </div>
 
