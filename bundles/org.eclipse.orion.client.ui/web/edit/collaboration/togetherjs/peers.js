@@ -617,22 +617,30 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     };
 
     session.send(msg);
+
+    //update yourself for self-tracking
+    updateLineAnnotation(session.clientId, myLine, this.Self.name, this.Self.color);
   }
 
   lineChanged = lineChanged.bind(peers);
+
+  updateLineAnnotation = function(id, line = 0, name = 'unknown', color = '#000000') {
+    assert(id);
+    var event = new CustomEvent("collabAnnotation", {"detail": {
+            'peerId': id,
+            'line': line,
+            'name': name,
+            'color': color
+        }
+    });
+    document.dispatchEvent(event);
+  }
 
   session.hub.on("line-change", function (msg) {
     if (! msg.sameUrl) {
       return;
     } else {
-        var event = new CustomEvent("collabAnnotation", {"detail": {
-                'peerId': msg.peer.id,
-                'line': msg.line,
-                'name': msg.name,
-                'color': msg.color
-            }
-        });
-        document.dispatchEvent(event);
+      updateLineAnnotation(msg.peer.id, msg.line, msg.name, msg.color);
     }
   });
 
