@@ -103,6 +103,11 @@ define(["jquery", "util", "peers", "session"], function ($, util, peers, session
   }
 
   session.on("resize", function () {
+    if ($(document).height() < 400) {
+      $('#togetherSide').css('position', 'relative');
+    } else {
+      $('#togetherSide').css('position', 'absolute');
+    }
     var win = $(".togetherjs-modal:visible, .togetherjs-window:visible");
     if (! win.length) {
       return;

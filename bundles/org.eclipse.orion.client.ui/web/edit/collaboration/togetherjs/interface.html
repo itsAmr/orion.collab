@@ -116,34 +116,9 @@
       <p class="togetherjs-participant-window-row"><strong>{{ gettext('Role:') }}</strong>
         <span class="togetherjs-person-role"></span>
       </p>
-
-      <p class="togetherjs-participant-window-row"><strong>{{ gettext('Currently at:') }}</strong>
-        <a class="togetherjs-person-url togetherjs-person-url-title"></a>
-      </p>
-
       <p class="togetherjs-participant-window-row"><strong>{{ gettext('Status:') }}</strong>
         <span class="togetherjs-person-status"></span>
       </p>
-
-      <p class="togetherjs-participant-window-row"><strong class="togetherjs-float-left">{{ gettext('Follow this participant:') }}</strong>
-        <label class="togetherjs-follow-question togetherjs-float-left" for="togetherjs-person-status-follow">
-          <input type="checkbox" id="togetherjs-person-status-follow">
-        </label>
-        <span class="togetherjs-clear"></span>
-      </p>
-
-    </section>
-
-    <section class="togetherjs-buttons">
-      <!-- Displayed when the peer is at a different URL: -->
-      <div class="togetherjs-different-url">
-        <a class="togetherjs-nudge togetherjs-default">{{ gettext('Nudge them') }}</a>
-        <a href="#" class="togetherjs-follow togetherjs-person-url togetherjs-primary">{{ gettext('Join them') }}</a>
-      </div>
-      <!-- Displayed when the peer is at your same URL: -->
-      <div class="togetherjs-same-url" style="display: none">
-        <span class="togetherjs-person-name"></span> {{ gettext('is on the same page as you.') }}
-      </div>
     </section>
   </div>
 
@@ -260,8 +235,8 @@
       <div class="togetherjs-menu-item" id="togetherjs-menu-refresh-invite">{{ gettext('Refresh users') }}</div>
       <div class="togetherjs-menu-item" id="togetherjs-menu-invite-anyone">{{ gettext('Invite anyone') }}</div>
     </div>
-    <div class="togetherjs-hr"></div>
-    <div class="togetherjs-menu-item" id="togetherjs-menu-end"><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt=""> {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span></div>
+<!--     <div class="togetherjs-hr"></div>
+    <div class="togetherjs-menu-item" id="togetherjs-menu-end"><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt=""> {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span></div> -->
   </div>
 
   <!-- template for one person in the invite-users list -->
@@ -309,7 +284,7 @@
   </div>
 
   <div class="togetherjs-menu" id="togetherjs-pick-color" style="display: none">
-    <div class="togetherjs-triangle-up"><img src="http://localhost:8080/togetherjs/images/icn-triangle-up.png"></div>
+<!--     <div class="togetherjs-triangle-up"><img src="http://localhost:8080/togetherjs/images/icn-triangle-up.png"></div> -->
     <div style="display: none">
       <div id="togetherjs-template-swatch" class="togetherjs-swatch">
       </div>

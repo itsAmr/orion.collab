@@ -152,6 +152,9 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
 
         //request content
         session.send(msg);
+      } else {
+        //this is the owner so no need to ask for init
+        session.received_initContent = true;
       }
     },
 
@@ -485,6 +488,9 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
   var initSent = false;
 
   function sendInit(requestorId) {
+    if (!session.received_initContent) {
+      return;
+    }
     initSent = true;
     var msg = {
       type: "init-content",
@@ -516,29 +522,6 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
     document.dispatchEvent(event);
     //reinitialize trackers
     // buildTrackers();
-    window.setInterval(function() {}, 1000);
-  }
-
-  function buildUI() {
-    var sideMenuList = document.getElementById('sideMenu').childNodes[2];
-    if (typeof sideMenuList == 'undefined') {
-        return;
-    } else {
-        for (i=0; i < 10; i++){
-            var listItem = document.createElement('li'); //$NON-NLS-0$
-            listItem.classList.add("sideMenuItem"); //$NON-NLS-0$
-            listItem.classList.add("sideMenu-notification"); //$NON-NLS-0$
-            var anchor = document.createElement("a"); //$NON-NLS-0$
-            anchor.classList.add("submenu-trigger"); // styling
-            var img = document.createElement("img");
-            img.width = "16";
-            img.height = "16";
-            img.src = "https://worldvectorlogo.com/logos/eclipse-11.svg";
-            anchor.appendChild(img);
-            listItem.appendChild(anchor);
-            sideMenuList.appendChild(listItem);
-        }
-    }
   }
 
   /*

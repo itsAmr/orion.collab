@@ -164,7 +164,12 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
           document.getElementById('sideMenu').childNodes[2].appendChild(menu);
           menu.style.display = 'block';
           menu.style.bottom = 0;
-          menu.style.position = 'absolute';
+          if (window.innerHeight > 400) {
+            menu.style.position = 'absolute';
+          } else {
+            menu.style.position = 'relative';
+            $('.sideMenuScrollButton').addClass('visible');
+          }
         }
       }
       dockSideMenu();
@@ -789,8 +794,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       var bound = $("#togetherjs-profile-button");
       var boundOffset = bound.offset();
       el.css({
-        top: boundOffset.top + bound.height() - $window.scrollTop() + "px",
-        left: (boundOffset.left + bound.width() - 10 - el.width() - $window.scrollLeft()) + "px"
+        top: boundOffset.top - 10 - $window.scrollTop() + "px",
+        left: (boundOffset.left + bound.width() + 10 + $window.scrollLeft()) + "px"
       });
     }
   }
@@ -801,8 +806,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       var menu = $("#togetherjs-menu-update-color");
       var menuOffset = menu.offset();
       picker.css({
-        top: menuOffset.top + menu.height(),
-        left: menuOffset.left
+        top: menuOffset.top - 50,
+        left: menuOffset.left + 10 + menu.width()
       });
     }
   }
@@ -1300,9 +1305,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
 
       }
 
-      function styleIt(el, peer) {
+      function styleNewPerson(el, peer) {
         el.addClass("sideMenuItem"); //$NON-NLS-0$
         el.addClass("sideMenu-notification"); //$NON-NLS-0$
+        el.css('background-color', peer.color);
         var anchor = document.createElement("a"); //$NON-NLS-0$
         anchor.classList.add("submenu-trigger"); // styling
         var img = document.createElement("img");
@@ -1321,7 +1327,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         peer: this.peer
       });
       this.dockElement.attr("id", this.peer.className("togetherjs-dock-element-"));
-      this.dockElement = styleIt(this.dockElement, this.peer);
+      this.dockElement = styleNewPerson(this.dockElement, this.peer);
       $(document).find("#togetherjs-dock-participants").append(this.dockElement);
       this.dockElement.find(".togetherjs-person").animateDockEntry();
       adjustDockSize(1);
@@ -1345,24 +1351,13 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         // Following doesn't happen until the window is closed
         // FIXME: should we tell the user this?
       });
-      this.maybeHideDetailWindow = this.maybeHideDetailWindow.bind(this);
-      session.on("hide-window", this.maybeHideDetailWindow);
       ui.container.append(this.detailElement);
       this.dockElement.click((function () {
         if (this.detailElement.is(":visible")) {
           windowing.hide(this.detailElement);
         } else {
           windowing.show(this.detailElement, {bind: this.dockElement});
-          this.scrollTo();
-          this.cursor().element.animate({
-            opacity:0.3
-          }).animate({
-            opacity:1
-          }).animate({
-            opacity:0.3
-          }).animate({
-            opacity:1
-          });
+          // this.scrollTo();
         }
       }).bind(this));
       this.updateFollow();
@@ -1412,16 +1407,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       // }
     },
 
-    maybeHideDetailWindow: function (windows) {
-      if (this.detailElement && windows[0] && windows[0][0] === this.detailElement[0]) {
-        if (this.followCheckbox[0].checked) {
-          this.peer.follow();
-        } else {
-          this.peer.unfollow();
-        }
-      }
-    },
-
     dockClick: function () {
       // FIXME: scroll to person
     },
@@ -1432,7 +1417,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
 
     destroy: function () {
       // FIXME: should I get rid of the dockElement?
-      session.off("hide-window", this.maybeHideDetailWindow);
     }
   });
 
