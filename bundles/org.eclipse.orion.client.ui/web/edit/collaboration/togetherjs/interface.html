@@ -19,43 +19,48 @@
     </div>
     <div id="togetherjs-buttons">
       <div style="display: none">
-        <li id="togetherjs-template-dock-person" class="togetherjs-button togetherjs-dock-person">
-<!--           <div class="togetherjs-tooltip togetherjs-dock-person-tooltip">
-            <span class="togetherjs-person-name"></span>
-            <span class="togetherjs-person-tooltip-arrow-r"></span>
-          </div> -->
-          <!-- <div class="togetherjs-person togetherjs-person-status-overlay"></div> -->
+        <li id="togetherjs-template-dock-person" class="togetherjs-button togetherjs-dock-person sideMenuItem sideMenu-notification">
+          <a class="submenu-trigger">
+            <img width="25" height="25" src="http://localhost:8080/togetherjs/images/default-avatar.png" alt="user">
+          </a>
         </li>
       </div>
-      <!-- <button id="togetherjs-menu-end" class="togetherjs-button"> -->
-          <!-- <div ><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt="">  -->
-          <!-- {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span> -->
-          <!-- </div> -->
-      <!-- </button> -->
-      <button id="togetherjs-profile-button" class="togetherjs-button" title="{{ gettext('This is you') }}">
+<!--       <button id="togetherjs-profile-button" class="togetherjs-button" title="{{ gettext('This is you') }}">
         <div class="togetherjs-person togetherjs-person-self"></div>
         <div id="togetherjs-profile-arrow"></div>
-      </button>
+      </button> -->
 <!--       <button id="togetherjs-share-button" class="togetherjs-button" title="{{ gettext('Add a friend') }}"></button> -->
-      <button id="togetherjs-audio-button" class="togetherjs-button" title="{{ gettext('Turn on microphone')}}">
-        <span id="togetherjs-audio-unavailable" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set">
-        </span>
-        <span id="togetherjs-audio-ready" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-outgoing" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-incoming" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-active" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-muted" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-error" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-      </button>
-<!--       <button id="togetherjs-chat-button" class="togetherjs-button" title="{{ gettext('Chat') }}"></button>
- -->      <!-- <div id="togetherjs-dock-participants"></div> -->
+
+<!--        <button id="togetherjs-chat-button" class="togetherjs-button" title="{{ gettext('Chat') }}"></button>
+ -->
     </div>
+  </div>
+
+  <!-- The dock that will be added to the sideMenu. Main component. -->
+  <div id="togetherjs-side" style="display: none">
+    <hr/>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-menu-end">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/button-end-session.png">
+      </a>
+    </li>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-profile-button" title="{{ gettext('This is you') }}">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/default-avatar.png">
+      </a>
+    </li>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-share-button" title="{{ gettext('Add a friend') }}">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/button-share.png">
+      </a>
+    </li>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-chat-button" title="{{ gettext('Chat') }}">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/button-chat.png">
+      </a>
+    </li>
+    <div id="togetherjs-dock-participants"></div>
+    <hr/>
   </div>
 
   <!-- The window for sharing the link: -->
@@ -170,13 +175,6 @@
         <span class="togetherjs-chat-content togetherjs-sub-content"></span>
       </div>
 
-      <!-- Template when a person joins the session: -->
-      <!-- <div id="togetherjs-template-chat-joined" class="togetherjs-chat-item togetherjs-chat-join-item">
-        <div class="togetherjs-person"></div>
-        <div class="togetherjs-inline-text"><span class="togetherjs-person-name"></span> joined the session.</div>
-        <div class="togetherjs-clear"></div>
-      </div> -->
-
       <!-- Template for when someone goes to a new URL: -->
       <div id="togetherjs-template-url-change" class="togetherjs-chat-item togetherjs-chat-url-change">
         <div class="togetherjs-person"></div>
@@ -229,12 +227,12 @@
     <div class="togetherjs-menu-hr-avatar"></div>
     <div class="togetherjs-menu-item" id="togetherjs-menu-update-color"><span class="togetherjs-person-bgcolor-self"></span> {{ gettext('Pick profile color') }}</div>
     <div class="togetherjs-hr"></div>
-    <div id="togetherjs-invite" style="display: none">
+    <!-- <div id="togetherjs-invite" style="display: none">
       <div class="togetherjs-hr"></div>
       <div id="togetherjs-invite-users"></div>
       <div class="togetherjs-menu-item" id="togetherjs-menu-refresh-invite">{{ gettext('Refresh users') }}</div>
       <div class="togetherjs-menu-item" id="togetherjs-menu-invite-anyone">{{ gettext('Invite anyone') }}</div>
-    </div>
+     </div> -->
 <!--     <div class="togetherjs-hr"></div>
     <div class="togetherjs-menu-item" id="togetherjs-menu-end"><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt=""> {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span></div> -->
   </div>

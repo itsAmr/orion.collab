@@ -214,7 +214,7 @@ input.togetherjs-upload-avatar {
   margin:0px 0px 0px;
   min-width: 0;
   font-size:14px;
-  color:#333333;
+  color:#fff;
   font-family: openSansLight, Helvetica;
   vertical-align:-2px !important;
   &:hover {
@@ -1761,4 +1761,27 @@ section.togetherjs-buttons .togetherjs-same-url {
    but we detect in Javascript that the client should be treated as mobile */
 .togetherjs-mobile-browser {
   @import "mobile.less";
+}
+
+/* Side dock hover stuff. Only applies to chrome users.*/
+#togetherjs-side #togetherjs-share-button  > a > img {
+  content: url('./images/button-share.png');
+  &:hover {
+    content: url('./images/button-share-active.png');
+  }
+}
+
+#togetherjs-side #togetherjs-share-button.togetherjs-active > a > img {
+  content: url('./images/button-share-active.png') !important;
+}
+
+#togetherjs-side #togetherjs-chat-button > a > img {
+  content: url('./images/button-chat.png');
+  &:hover {
+    content: url('./images/button-chat-active.png');
+  }
+}
+
+#togetherjs-side #togetherjs-chat-button.togetherjs-active > a > img {
+  content: url('./images/button-chat-active.png') !important;
 }

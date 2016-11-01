@@ -22,8 +22,9 @@
 					require(["orion/splash"], load, load);
 				}
 			});
-			require(["build/togetherjs-min.js"] , function() {
+			require(["collaboration/build/togetherjs-min.js"] , function() {
 				TogetherJS.config("hubBase", "http://hubserver.mybluemix.net/");
+				// TogetherJS.config("hubBase", "http://localhost:8080");
 				TogetherJS.config("getUserName", 
 					function() {
 						return new Promise(function(resolve, reject) {
