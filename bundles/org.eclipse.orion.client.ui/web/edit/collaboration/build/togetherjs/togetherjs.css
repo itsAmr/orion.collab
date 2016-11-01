@@ -147,11 +147,11 @@ http://yuilibrary.com/license/
   font-weight: normal;
 }
 .togetherjs a {
-  color: #0095DD;
+  color: #26343f;
   text-decoration: none;
 }
 .togetherjs a:hover {
-  color: #0095DD;
+  color: #26343f;
   text-decoration: underline;
 }
 .togetherjs p {
@@ -176,7 +176,7 @@ button:disabled {
   opacity: 0.2;
 }
 button[disabled]:hover {
-  background: #0194DB;
+  background: #26343f;
 }
 .togetherjs-default {
   display: inline-block;
@@ -221,7 +221,7 @@ button[disabled]:hover {
   text-shadow: none;
   margin: 3px;
   font-size: 14px;
-  background: #0194DB;
+  background: #26343f;
   color: #fff;
 }
 .togetherjs-primary.togetherjs-follow {
@@ -348,13 +348,13 @@ input.togetherjs-upload-avatar {
 }
 .togetherjs-cancel {
   display: inline-block;
-  background-color: #0095dd;
+  background-color: #26343f;
   border: none;
   padding: 3px 0px;
   margin: 0px 0px 0px;
   min-width: 0;
   font-size: 14px;
-  color: #333333;
+  color: #fff;
   font-family: openSansLight, Helvetica;
   vertical-align: -2px !important;
 }
@@ -379,7 +379,7 @@ input.togetherjs-upload-avatar {
   position: relative;
   width: 60px;
   height: 60px;
-  background-color: #0095dd;
+  background-color: #26343f;
   background-size: 40px 40px;
   background-repeat: no-repeat;
   background-position: center;
@@ -410,7 +410,7 @@ input.togetherjs-upload-avatar {
 }
 .togetherjs #togetherjs-buttons #togetherjs-audio-button:hover {
   background-image: url('./images/button-mic-active.png');
-  /*background-color:#0095dd;*/
+  /*background-color:@background-color;*/
 
   /*cursor: default;*/
 
@@ -445,7 +445,7 @@ input.togetherjs-upload-avatar {
   border-top-right-radius: 4px;
 }
 .togetherjs .togetherjs-subtitle {
-  background: #0195DD;
+  background: #26343f;
   width: 280px;
   height: 17px;
   border-bottom: 1px solid #0071A7;
@@ -483,7 +483,7 @@ input.togetherjs-upload-avatar {
   font-family: openSansLight, Helvetica, sans-serif;
 }
 .togetherjs #togetherjs-chat-input:focus {
-  border: 1px solid #0095DD;
+  border: 1px solid #26343f;
 }
 .togetherjs #togetherjs-chat-input-box {
   margin: 0;
@@ -594,7 +594,7 @@ input.togetherjs-upload-avatar {
   margin: 0 -7px 0 -7px;
   padding: 10px 4px 5px 30px;
   height: 24px;
-  background: #0095DD;
+  background: #26343f;
   border-radius: 4px 4px 0 0;
   position: relative;
   border-bottom: 1px solid #0071A7;
@@ -610,7 +610,7 @@ input.togetherjs-upload-avatar {
   margin: 7px 0px;
 }
 .togetherjs .togetherjs-window .togetherjs-share-link:focus {
-  border: 1px solid #0095DD;
+  border: 1px solid #26343f;
 }
 .togetherjs .togetherjs-window header button.togetherjs-close {
   background-color: inherit;
@@ -621,7 +621,7 @@ input.togetherjs-upload-avatar {
   float: right;
   font-weight: bold;
   cursor: pointer;
-  background-color: #0095dd;
+  background-color: #26343f;
   background-image: url('./images/icon-close@2x.png');
   background-position: center center;
   background-repeat: no-repeat;
@@ -634,7 +634,6 @@ input.togetherjs-upload-avatar {
 }
 .togetherjs .togetherjs-window header button.togetherjs-close:hover {
   background-image: url('./images/icon-close-active.png');
-  background-color: rgba(0, 0, 0, 0.1);
 }
 .togetherjs .togetherjs-window #togetherjs-chat-messages {
   overflow-y: auto;
@@ -651,7 +650,7 @@ input.togetherjs-upload-avatar {
   margin: 0 -1px 0 -1px;
   padding: 10px 4px 5px 30px;
   height: 24px;
-  background: #0095DD;
+  background: #26343f;
   border-radius: 4px 4px 0 0;
   position: relative;
   border-bottom: 1px solid #0071A7;
@@ -719,7 +718,7 @@ input.togetherjs-upload-avatar {
   margin: 0 -7px 0 -7px;
   padding: 10px 4px 5px 30px;
   height: 24px;
-  background: #0095DD;
+  background: #26343f;
   border-radius: 4px 4px 0 0;
   position: relative;
   border-bottom: 1px solid #0071A7;
@@ -735,7 +734,7 @@ input.togetherjs-upload-avatar {
   margin: 7px 0px;
 }
 .togetherjs .togetherjs-notification .togetherjs-share-link:focus {
-  border: 1px solid #0095DD;
+  border: 1px solid #26343f;
 }
 .togetherjs .togetherjs-notification header button.togetherjs-close {
   background-color: inherit;
@@ -746,7 +745,7 @@ input.togetherjs-upload-avatar {
   float: right;
   font-weight: bold;
   cursor: pointer;
-  background-color: #0095dd;
+  background-color: #26343f;
   background-image: url('./images/icon-close@2x.png');
   background-position: center center;
   background-repeat: no-repeat;
@@ -759,7 +758,6 @@ input.togetherjs-upload-avatar {
 }
 .togetherjs .togetherjs-notification header button.togetherjs-close:hover {
   background-image: url('./images/icon-close-active.png');
-  background-color: rgba(0, 0, 0, 0.1);
 }
 .togetherjs .togetherjs-notification #togetherjs-chat-messages {
   overflow-y: auto;
@@ -1073,10 +1071,10 @@ input.togetherjs-upload-avatar {
   margin: -2px 0px;
 }
 #togetherjs-menu .togetherjs-self-name:focus {
-  border: 1px solid #0095DD;
+  border: 1px solid #26343f;
 }
 #togetherjs-menu .togetherjs-self-name:focus {
-  border-bottom: 1px solid #0095DD;
+  border-bottom: 1px solid #26343f;
 }
 /*Participant windows*/
 #togetherjs-participantlist.togetherjs-window {
@@ -1201,7 +1199,7 @@ section.togetherjs-buttons .togetherjs-same-url {
 #togetherjs-dock {
   position: fixed;
   z-index: 10000;
-  background-color: #0095dd;
+  background-color: #26343f;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   /*border:1px solid #000;*/
 
@@ -1447,7 +1445,7 @@ section.togetherjs-buttons .togetherjs-same-url {
   margin: 0 -7px 0 -7px;
   padding: 10px 4px 5px 30px;
   height: 24px;
-  background: #0095DD;
+  background: #26343f;
   border-radius: 4px 4px 0 0;
   position: relative;
   border-bottom: 1px solid #0071A7;
@@ -1463,7 +1461,7 @@ section.togetherjs-buttons .togetherjs-same-url {
   margin: 7px 0px;
 }
 .togetherjs .togetherjs-modal .togetherjs-share-link:focus {
-  border: 1px solid #0095DD;
+  border: 1px solid #26343f;
 }
 .togetherjs .togetherjs-modal header button.togetherjs-close {
   background-color: inherit;
@@ -1474,7 +1472,7 @@ section.togetherjs-buttons .togetherjs-same-url {
   float: right;
   font-weight: bold;
   cursor: pointer;
-  background-color: #0095dd;
+  background-color: #26343f;
   background-image: url('./images/icon-close@2x.png');
   background-position: center center;
   background-repeat: no-repeat;
@@ -1487,7 +1485,6 @@ section.togetherjs-buttons .togetherjs-same-url {
 }
 .togetherjs .togetherjs-modal header button.togetherjs-close:hover {
   background-image: url('./images/icon-close-active.png');
-  background-color: rgba(0, 0, 0, 0.1);
 }
 .togetherjs .togetherjs-modal #togetherjs-chat-messages {
   overflow-y: auto;
@@ -1737,7 +1734,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: inset 0 0 2px #0095dd;
+    box-shadow: inset 0 0 2px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1748,7 +1745,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: inset 0 0 2px #0095dd;
+    box-shadow: inset 0 0 2px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1759,7 +1756,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: inset 0 0 2px #0095dd;
+    box-shadow: inset 0 0 2px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1770,7 +1767,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: inset 0 0 2px #0095dd;
+    box-shadow: inset 0 0 2px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1787,7 +1784,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: 0 0 5px #0095dd;
+    box-shadow: 0 0 5px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1798,7 +1795,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: 0 0 5px #0095dd;
+    box-shadow: 0 0 5px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1809,7 +1806,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: 0 0 5px #0095dd;
+    box-shadow: 0 0 5px #26343f;
   }
   100% {
     box-shadow: none;
@@ -1820,7 +1817,7 @@ section.togetherjs-buttons .togetherjs-same-url {
     box-shadow: none;
   }
   50% {
-    box-shadow: 0 0 5px #0095dd;
+    box-shadow: 0 0 5px #26343f;
   }
   100% {
     box-shadow: none;
@@ -2711,4 +2708,23 @@ section.togetherjs-buttons .togetherjs-same-url {
   .togetherjs-mobile-browser textarea {
     font-size: 16px !important;
   }
+}
+/* Side dock hover stuff. Only applies to chrome users.*/
+#togetherjs-side #togetherjs-share-button > a > img {
+  content: url('./images/button-share.png');
+}
+#togetherjs-side #togetherjs-share-button > a > img:hover {
+  content: url('./images/button-share-active.png');
+}
+#togetherjs-side #togetherjs-share-button.togetherjs-active > a > img {
+  content: url('./images/button-share-active.png') !important;
+}
+#togetherjs-side #togetherjs-chat-button > a > img {
+  content: url('./images/button-chat.png');
+}
+#togetherjs-side #togetherjs-chat-button > a > img:hover {
+  content: url('./images/button-chat-active.png');
+}
+#togetherjs-side #togetherjs-chat-button.togetherjs-active > a > img {
+  content: url('./images/button-chat-active.png') !important;
 }

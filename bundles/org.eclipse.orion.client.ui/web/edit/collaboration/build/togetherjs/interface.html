@@ -8,7 +8,7 @@
 <div id="togetherjs-container" class="togetherjs">
 
   <!-- This is the main set of buttons: -->
-  <div id="togetherjs-dock" class="togetherjs-dock-right">
+  <div id="togetherjs-dock" class="togetherjs-dock-right" style="display: none;">
     <div id="togetherjs-dock-anchor" title="{{ gettext('Move the dock') }}">
       <span id="togetherjs-dock-anchor-horizontal">
         <img src="http://localhost:8080/togetherjs/images/icn-handle-circle@2x.png" alt="drag">
@@ -19,62 +19,48 @@
     </div>
     <div id="togetherjs-buttons">
       <div style="display: none">
-        <button id="togetherjs-template-dock-person" class="togetherjs-button togetherjs-dock-person">
-          <div class="togetherjs-tooltip togetherjs-dock-person-tooltip">
-            <span class="togetherjs-person-name"></span>
-            <span class="togetherjs-person-tooltip-arrow-r"></span>
-          </div>
-          <div class="togetherjs-person togetherjs-person-status-overlay"></div>
-        </button>
+        <li id="togetherjs-template-dock-person" class="togetherjs-button togetherjs-dock-person sideMenuItem sideMenu-notification">
+          <a class="submenu-trigger">
+            <img width="25" height="25" src="http://localhost:8080/togetherjs/images/default-avatar.png" alt="user">
+          </a>
+        </li>
       </div>
-      <!-- <button id="togetherjs-menu-end" class="togetherjs-button"> -->
-          <!-- <div ><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt="">  -->
-          <!-- {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span> -->
-          <!-- </div> -->
-      <!-- </button> -->
-      <button id="togetherjs-profile-button" class="togetherjs-button" title="{{ gettext('This is you') }}">
+<!--       <button id="togetherjs-profile-button" class="togetherjs-button" title="{{ gettext('This is you') }}">
         <div class="togetherjs-person togetherjs-person-self"></div>
         <div id="togetherjs-profile-arrow"></div>
-      </button>
-      <button id="togetherjs-share-button" class="togetherjs-button" title="{{ gettext('Add a friend') }}"></button>
-      <button id="togetherjs-audio-button" class="togetherjs-button" title="{{ gettext('Turn on microphone')}}">
-        <span id="togetherjs-audio-unavailable" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set">
-        </span>
-        <span id="togetherjs-audio-ready" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-outgoing" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-incoming" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-active" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-muted" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-        <span id="togetherjs-audio-error" class="togetherjs-audio-set" data-toggles=".togetherjs-audio-set" style="display: none">
-        </span>
-      </button>
-      <button id="togetherjs-chat-button" class="togetherjs-button" title="{{ gettext('Chat') }}"></button>
-      <div id="togetherjs-dock-participants"></div>
+      </button> -->
+<!--       <button id="togetherjs-share-button" class="togetherjs-button" title="{{ gettext('Add a friend') }}"></button> -->
+
+<!--        <button id="togetherjs-chat-button" class="togetherjs-button" title="{{ gettext('Chat') }}"></button>
+ -->
     </div>
   </div>
 
-  <!-- The window for editing the avatar: -->
-  <div id="togetherjs-avatar-edit" class="togetherjs-modal"
-       style="display: none">
-    <header> {{ gettext('Update avatar') }} </header>
-    <section>
-      <div class="togetherjs-avatar-preview togetherjs-person togetherjs-person-self"></div>
-      <div id="togetherjs-avatar-buttons">
-        <input type="file" class="togetherjs-upload-avatar">
-        <!--<button id="togetherjs-upload-avatar" class="togetherjs-primary">Upload a picture</button>-->
-        <!--<button id="togetherjs-camera-avatar" class="togetherjs-default">Take a picture</button>-->
-      </div>
-    </section>
-    <section class="togetherjs-buttons">
-      <button class="togetherjs-cancel togetherjs-dismiss">{{ gettext('Cancel') }}</button>
-      <span class="togetherjs-alt-text">{{ gettext('or') }}</span>
-      <button class="togetherjs-avatar-save togetherjs-primary">{{ gettext('Save') }}</button>
-    </section>
+  <!-- The dock that will be added to the sideMenu. Main component. -->
+  <div id="togetherjs-side" style="display: none">
+    <hr/>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-menu-end">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/button-end-session.png">
+      </a>
+    </li>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-profile-button" title="{{ gettext('This is you') }}">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/default-avatar.png">
+      </a>
+    </li>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-share-button" title="{{ gettext('Add a friend') }}">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/button-share.png">
+      </a>
+    </li>
+    <li class="sideMenuItem sideMenu-notification" id="togetherjs-chat-button" title="{{ gettext('Chat') }}">
+      <a class="submenu-trigger">
+        <img width="25" height="25" src="http://localhost:8080/togetherjs/images/button-chat.png">
+      </a>
+    </li>
+    <div id="togetherjs-dock-participants"></div>
+    <hr/>
   </div>
 
   <!-- The window for sharing the link: -->
@@ -135,34 +121,9 @@
       <p class="togetherjs-participant-window-row"><strong>{{ gettext('Role:') }}</strong>
         <span class="togetherjs-person-role"></span>
       </p>
-
-      <p class="togetherjs-participant-window-row"><strong>{{ gettext('Currently at:') }}</strong>
-        <a class="togetherjs-person-url togetherjs-person-url-title"></a>
-      </p>
-
       <p class="togetherjs-participant-window-row"><strong>{{ gettext('Status:') }}</strong>
         <span class="togetherjs-person-status"></span>
       </p>
-
-      <p class="togetherjs-participant-window-row"><strong class="togetherjs-float-left">{{ gettext('Follow this participant:') }}</strong>
-        <label class="togetherjs-follow-question togetherjs-float-left" for="togetherjs-person-status-follow">
-          <input type="checkbox" id="togetherjs-person-status-follow">
-        </label>
-        <span class="togetherjs-clear"></span>
-      </p>
-
-    </section>
-
-    <section class="togetherjs-buttons">
-      <!-- Displayed when the peer is at a different URL: -->
-      <div class="togetherjs-different-url">
-        <a class="togetherjs-nudge togetherjs-default">{{ gettext('Nudge them') }}</a>
-        <a href="#" class="togetherjs-follow togetherjs-person-url togetherjs-primary">{{ gettext('Join them') }}</a>
-      </div>
-      <!-- Displayed when the peer is at your same URL: -->
-      <div class="togetherjs-same-url" style="display: none">
-        <span class="togetherjs-person-name"></span> {{ gettext('is on the same page as you.') }}
-      </div>
     </section>
   </div>
 
@@ -214,13 +175,6 @@
         <span class="togetherjs-chat-content togetherjs-sub-content"></span>
       </div>
 
-      <!-- Template when a person joins the session: -->
-      <!-- <div id="togetherjs-template-chat-joined" class="togetherjs-chat-item togetherjs-chat-join-item">
-        <div class="togetherjs-person"></div>
-        <div class="togetherjs-inline-text"><span class="togetherjs-person-name"></span> joined the session.</div>
-        <div class="togetherjs-clear"></div>
-      </div> -->
-
       <!-- Template for when someone goes to a new URL: -->
       <div id="togetherjs-template-url-change" class="togetherjs-chat-item togetherjs-chat-url-change">
         <div class="togetherjs-person"></div>
@@ -253,57 +207,6 @@
     </section>
   </div>
 
-  <!-- this is a kind of warning popped up when you (successfully) start RTC: -->
-  <div id="togetherjs-rtc-info" class="togetherjs-window"
-       data-bind-to="#togetherjs-audio-button"
-       style="display: none">
-
-    <header> {{ gettext('Audio Chat') }} </header>
-    <section>
-      <p>
-        {{ gettext('Activate your <strong>browser microphone</strong> near your URL bar above.') }}
-      </p>
-      <p>
-        {{ gettext('Talking on your microphone through your web browser is an experimental feature.') }}
-      </p>
-      <p>
-        {{ gettext('Read more about Audio Chat') }} <a href="https://github.com/mozilla/togetherjs/wiki/About-Audio-Chat-and-WebRTC" target="_blank">{{ gettext('here') }}</a>.
-      </p>
-    </section>
-
-    <section class="togetherjs-buttons">
-      <label for="togetherjs-rtc-info-dismiss" style="display: inline;">
-        <input class="togetherjs-dont-show-again" id="togetherjs-rtc-info-dismiss" type="checkbox">
-        {{ gettext('Don\'t show again.') }}
-      </label>
-      <button class="togetherjs-default togetherjs-dismiss" type="button">{{ gettext('Close') }}</button>
-    </section>
-  </div>
-
-  <!-- this is popped up when you hit the audio button, but RTC isn't
-  supported: -->
-  <div id="togetherjs-rtc-not-supported" class="togetherjs-window"
-       data-bind-to="#togetherjs-audio-button"
-       style="display: none">
-    <header> {{ gettext('Audio Chat') }} </header>
-
-    <section>
-      <p>{{ gettext('Audio chat requires you to use a <a href=\'https://github.com/mozilla/togetherjs/wiki/About-Audio-Chat-and-WebRTC\' target=\'_blank\'>newer browser</a>!') }}</p>
-      <p>
-        {{ gettext('Live audio chat requires a newer (or different) browser than you\'re using.') }}
-      </p>
-      <p>
-        {{ gettext('See <a href=\'https://github.com/mozilla/togetherjs/wiki/About-Audio-Chat-and-WebRTC\' target=\'_blank\'>this page</a>for more information and a list of supported browsers.') }}
-      </p>
-    </section>
-
-    <section class="togetherjs-buttons">
-      <div class="togetherjs-rtc-dialog-btn">
-        <button class="togetherjs-default togetherjs-dismiss" type="button">{{ gettext('Close') }}</button>
-      </div>
-    </section>
-  </div>
-
   <!-- The popup when a chat message comes in and the #togetherjs-chat window isn't open -->
   <div id="togetherjs-chat-notifier" class="togetherjs-notification"
        data-bind-to="#togetherjs-chat-button"
@@ -324,14 +227,14 @@
     <div class="togetherjs-menu-hr-avatar"></div>
     <div class="togetherjs-menu-item" id="togetherjs-menu-update-color"><span class="togetherjs-person-bgcolor-self"></span> {{ gettext('Pick profile color') }}</div>
     <div class="togetherjs-hr"></div>
-    <div id="togetherjs-invite" style="display: none">
+    <!-- <div id="togetherjs-invite" style="display: none">
       <div class="togetherjs-hr"></div>
       <div id="togetherjs-invite-users"></div>
       <div class="togetherjs-menu-item" id="togetherjs-menu-refresh-invite">{{ gettext('Refresh users') }}</div>
       <div class="togetherjs-menu-item" id="togetherjs-menu-invite-anyone">{{ gettext('Invite anyone') }}</div>
-    </div>
-    <div class="togetherjs-hr"></div>
-    <div class="togetherjs-menu-item" id="togetherjs-menu-end"><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt=""> {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span></div>
+     </div> -->
+<!--     <div class="togetherjs-hr"></div>
+    <div class="togetherjs-menu-item" id="togetherjs-menu-end"><img src="http://localhost:8080/togetherjs/images/button-end-session.png" alt=""> {{ gettext('End') }} <span class="togetherjs-tool-name">{{ gettext('TogetherJS') }}</span></div> -->
   </div>
 
   <!-- template for one person in the invite-users list -->
@@ -379,7 +282,7 @@
   </div>
 
   <div class="togetherjs-menu" id="togetherjs-pick-color" style="display: none">
-    <div class="togetherjs-triangle-up"><img src="http://localhost:8080/togetherjs/images/icn-triangle-up.png"></div>
+<!--     <div class="togetherjs-triangle-up"><img src="http://localhost:8080/togetherjs/images/icn-triangle-up.png"></div> -->
     <div style="display: none">
       <div id="togetherjs-template-swatch" class="togetherjs-swatch">
       </div>

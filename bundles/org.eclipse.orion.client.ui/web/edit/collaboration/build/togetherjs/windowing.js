@@ -52,7 +52,7 @@ define(["jquery", "util", "peers", "session"], function ($, util, peers, session
     win = $(win);
     assert(bound.length, "Cannot find binding:", bound.selector, "from:", win.selector);
     // FIXME: hardcoding
-    var ifacePos = "right";
+    var ifacePos = "left";
     //var ifacePos = panelPosition();
     var boundPos = bound.offset();
     boundPos.height = bound.height();
@@ -103,6 +103,11 @@ define(["jquery", "util", "peers", "session"], function ($, util, peers, session
   }
 
   session.on("resize", function () {
+    if ($(document).height() < 400) {
+      $('#togetherjs-side').css('position', 'relative');
+    } else {
+      $('#togetherjs-side').css('position', 'absolute');
+    }
     var win = $(".togetherjs-modal:visible, .togetherjs-window:visible");
     if (! win.length) {
       return;
