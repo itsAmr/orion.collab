@@ -61,101 +61,6 @@ module.exports = function(options) {
 		}
 	}
 
-	function handleDiff(req, res, rest, body) {
-		var diffs = body.diff || [];
-		var contents = body.contents;
-		var patchPath = getSafeFilePath(req, rest);
-		fs.exists(patchPath, function(destExists) {
-			if (destExists) {
-				fs.readFile(patchPath, function (error, data) {
-					if (error) {
-						writeError(500, res, error);
-						return;
-					}
-					try {
-						var newContents = data.toString();
-						if (newContents.length > 0) {
-							var code = newContents.charCodeAt(0);
-							if (code === 0xFEFF || code === 0xFFFE) {
-								newContents = newContents.substring(1);
-							}
-						}
-						var buffer = {
-							_text: [newContents], 
-							replaceText: function (text, start, end) {
-								var offset = 0, chunk = 0, length;
-								while (chunk<this._text.length) {
-									length = this._text[chunk].length; 
-									if (start <= offset + length) { break; }
-									offset += length;
-									chunk++;
-								}
-								var firstOffset = offset;
-								var firstChunk = chunk;
-								while (chunk<this._text.length) {
-									length = this._text[chunk].length; 
-									if (end <= offset + length) { break; }
-									offset += length;
-									chunk++;
-								}
-								var lastOffset = offset;
-								var lastChunk = chunk;
-								var firstText = this._text[firstChunk];
-								var lastText = this._text[lastChunk];
-								var beforeText = firstText.substring(0, start - firstOffset);
-								var afterText = lastText.substring(end - lastOffset);
-								var params = [firstChunk, lastChunk - firstChunk + 1];
-								if (beforeText) { params.push(beforeText); }
-								if (text) { params.push(text); }
-								if (afterText) { params.push(afterText); }
-								Array.prototype.splice.apply(this._text, params);
-								if (this._text.length === 0) { this._text = [""]; }
-							},
-							getText: function() {
-								return this._text.join("");									
-							}
-						};
-						for (var i=0; i<diffs.length; i++) {
-							var change = diffs[i];
-							buffer.replaceText(change.text, change.start, change.end);
-						}
-						newContents = buffer.getText();
-					} catch (ex) {
-						writeError(500, res, ex);
-						return;
-					}
-
-					var failed = false;
-					if (contents) {
-						if (newContents !== contents) {
-							failed = true;
-							newContents = contents;
-						}
-					}
-					fs.writeFile(patchPath, newContents, function(err) {
-						if (err) {
-							writeError(500, res, error);
-							return;
-						}
-						if (failed) {
-							writeError(406, res, new Error('Bad file diffs. Please paste this content in a bug report: \u00A0\u00A0 \t' + JSON.stringify(body)));
-							return;
-						}
-						fs.stat(patchPath, function(error, stats) {
-							if (err) {
-								writeError(500, res, error);
-								return;
-							}
-							writeFileMetadata(req, res, patchPath, stats, ETag.fromString(newContents) /*the new ETag*/);
-						});
-					});
-					
-				});
-			} else {
-				writeError(500, res, 'Destination does not exist.');
-			}
-		});
-	}
 
 	function makeFile(fileRoot, req, res, destFilepath) {
 		var isDirectory = req.body && getBoolean(req.body, 'Directory');
@@ -163,9 +68,9 @@ module.exports = function(options) {
 		// Just a regular file write
 		return Promise.resolve()
 		.then(function() {
-			return isDirectory ? fs.mkdirSync(destFilepath) : fs.writeFileSync(destFilepath, '');
-		});
-		// .catch(api.writeError.bind(null, 500, res));
+			return isDirectory ? (!fs.existsSync(destFilepath) ? fs.mkdirSync(destFilepath) : true) : (fs.writeFileSync(destFilepath, ''));
+		})
+		.catch(api.writeError.bind(null, 500, res));
 	}
 
 	var router = express.Router({mergeParams: true});
@@ -176,14 +81,14 @@ module.exports = function(options) {
 	*/
 	router.get('*', jsonParser, function(req, res) {
 		var collabParams = req.params["0"];
+		var username = req.query['username'] || '';
 		var extraParamsIndex = collabParams.indexOf(req.collabSessionID);
 		var rest = collabParams.substring(1, extraParamsIndex !== -1 ? extraParamsIndex : collabParams.length);
-		rest = ".scratch" + Date.now() + "/" + rest;
+		rest = username + "-scratchpad" + "/" + rest;
 		var collabSessionID = req.collabSessionID;
 		var filepath = getSafeFilePath(req, rest);
 
 		var structure = rest.split("/");
-		// structure.unshift(".scratch" + Date.now());
 
 		Promise.map(structure, function(value, index) {
 			filepath = getSafeFilePath(req, "/" + structure.slice(0, index+1).join('/'));

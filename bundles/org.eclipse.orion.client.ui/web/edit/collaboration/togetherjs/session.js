@@ -83,8 +83,9 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     if (includeHashInUrl) {
         if (session.isClient) {
             if (location.href == TogetherJS.config.get("sessionFileUrl")) {
-                var re = /\/\.scratch.([^/]+)/;
-                return (location.href.replace(re, ''));
+                var loc = location.href;
+                var re = /scratchpad([\/])(.*)/;
+                return (loc.substring(0, loc.indexOf('file/') + 'file/'.length) + loc.match(re)[2]);
             }
             else {
                 return " ";
