@@ -122,7 +122,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         document.getElementById('sideMenu').childNodes[2].appendChild(menu);
         menu.style.display = 'block';
         menu.style.bottom = 0;
-        if (window.innerHeight > 400) {
+        if (window.innerHeight > 300 + menu.clientHeight) {
           menu.style.position = 'absolute';
         } else {
           menu.style.position = 'relative';
@@ -770,6 +770,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
   }
 
   session.on("resize", function () {
+    checkDockScrollNeeded();
     bindMenu();
     bindPicker();
   });
@@ -1254,14 +1255,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         });
       }
 
-      // FIXME: turned off for now
-      if( numberOfUsers >= 5 && false) {
-        CollapsedDock();
-      } else {
-        // reset
-
-      }
-
       function styleNewPerson(el, peer) {
         el.css('background-color', peer.color);
         return el;
@@ -1278,6 +1271,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       $("#togetherjs-dock-participants").append(this.dockElement);
       this.dockElement.find(".togetherjs-person").animateDockEntry();
       adjustDockSize(1);
+      checkDockScrollNeeded();
       this.detailElement = templating.sub("participant-window", {
         peer: this.peer
       });
@@ -1320,6 +1314,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         this.detailElement.remove();
         this.detailElement = null;
         adjustDockSize(-1);
+        checkDockScrollNeeded();
       }).bind(this));
     },
 
@@ -1366,6 +1361,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       // FIXME: should I get rid of the dockElement?
     }
   });
+
+  //checks if number of users has grown too much and make the sidemenu scrollable if needed.
+  function checkDockScrollNeeded() {
+    if ($(document).height() < 300 + $('#togetherjs-side').height()) {
+      $('#togetherjs-side').css('position', 'relative');
+    }
+    else {
+      $('#togetherjs-side').css('position', 'absolute');
+    }
+  }
 
   function updateChatParticipantList() {
     var live = peers.getAllPeers(true);
