@@ -128,8 +128,47 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
           menu.style.position = 'relative';
           $('.sideMenuScrollButton').addClass('visible');
         }
+        dimAll();
       }
     }
+
+    //Dim everything other than the editor and sidemenu
+    dimAll = function() {
+      if (!document.getElementById('editor')) {
+        setTimeout(function() {dimAll()}, 2000);
+        return;
+      } else {
+        //The following is taken from http://stackoverflow.com/a/9455598/4488647
+        $('<div id="__msg_overlay">').css({
+              "width" : "100%"
+            , "height" : "100%"
+            , "background" : "#000"
+            , "position" : "fixed"
+            , "top" : "0"
+            , "left" : "0"
+            , "zIndex" : "30"
+            , "MsFilter" : "progid:DXImageTransform.Microsoft.Alpha(Opacity=60)"
+            , "filter" : "alpha(opacity=60)"
+            , "MozOpacity" : 0.6
+            , "KhtmlOpacity" : 0.6
+            , "opacity" : 0.6
+        }).appendTo(document.body);
+        //END
+        document.getElementById('togetherjs-side').style.zIndex = 50;
+        //the runbar needs to be higher due to the dropdown
+        document.getElementById('runBarWrapper').style.zIndex = 55;
+        $('.editorViewerContent').css('z-index',50);
+        $('.textviewTooltip').css('z-index', 50);
+      }
+    }
+
+    reverseDim = function() {
+      $('#__msg_overlay').remove();
+      $('.editorViewerContent').css('z-index', '');
+      $('.textviewTooltip').css('z-index', '');
+      document.getElementById('runBarWrapper').style.zIndex = '';
+    }
+
     dockSideMenu();
 
     fixupAvatars(container);
@@ -837,6 +876,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
 
   session.on("close", function () {
     $('#togetherjs-side').remove();
+    reverseDim();
     if($.browser.mobile) {
       // remove bg overlay
       //$(".overlay").remove();
@@ -1133,6 +1173,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         });
       }
       if (this.peer.color) {
+        var colors = $(document).find("#" + this.peer.className("togetherjs-dock-element-"));
+        colors.css({
+          backgroundColor: this.peer.color
+        });
         var colors = container.find("." + this.peer.className("togetherjs-person-bgcolor-"));
         colors.css({
           backgroundColor: this.peer.color
