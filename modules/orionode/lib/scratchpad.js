@@ -108,35 +108,35 @@ module.exports = function(options) {
 		});
 	});
 
+	function removeFile(destFilepath, res) {
+		return fs.statAsync(destFilepath)
+		.then(function(stats) {
+			return (stats.isFile() ? fs.unlinkSync(destFilepath) : fs.rmdirSync(destFilepath));
+		})
+		.catch(function(reason) {
+			//We only want to delete a folder if it is empty. If it is not, deleting the file would suffice.
+			reason.code != "ENOTEMPTY" ? console.error(reason) : null;
+		});
+	}
+
 	// DELETE - no request body
 	router.delete('*', function(req, res) {
 		var rest = req.params["0"].substring(1);
 		var filepath = getSafeFilePath(req, rest);
 
 		var structure = rest.split("/");
+		p = Promise.resolve();
 
-		filepath = getSafeFilePath(req, "/" + structure[0]);
-
-		fileUtil.withStatsAndETag(filepath, function(error, stats, etag) {
-			var ifMatchHeader = req.headers['if-match'];
-			if (error && error.code === 'ENOENT') {
-				return res.sendStatus(204);
-			} else if (ifMatchHeader && ifMatchHeader !== etag) {
-				return res.sendStatus(412);
-			}
-			var callback = function(error) {
-				if (error) {
-					writeError(500, res, error);
-					return;
-				}
-				res.sendStatus(204);
-			};
-			if (stats.isDirectory()) {
-				fileUtil.rumRuff(filepath, callback);
-			} else {
-				fs.unlink(filepath, callback);
-			}
+		for (var i = structure.length; i > 0; i--) {
+			filepath = getSafeFilePath(req, "/" + structure.slice(0, i).join('/'));
+			p = p.then(removeFile(filepath, res));
+		}
+		
+		p.then(function() {
+			res.sendStatus(204);
 		});
+
+		return p;
 	});
 
 	return router;

@@ -112,8 +112,9 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
             url: '/scratchpad/' + file,
             type: 'DELETE',
             success: function(result) {
-                location.href = '/';
-                // location.hash = '#/workspace/orionode';
+              //TODO: refresh file tree if possible instead of refreshing page
+              location.href = '/';
+              // location.hash = '#/workspace/orionode';
             }
         });
     }
