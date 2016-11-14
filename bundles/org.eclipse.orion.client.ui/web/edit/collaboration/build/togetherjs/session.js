@@ -66,9 +66,9 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     hash = hash.replace(/&?togetherjs-[a-zA-Z0-9]+/, "");
     hash = hash || "#";
     if (!session.isClient) {
-        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId;
+        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId + "?username=" + TogetherJS.config.get("creatorUsername");
     } else {
-        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(28, hash.length) + "&togetherjs=" + session.shareId;
+        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(28, hash.length) + "&togetherjs=" + session.shareId + "?username=" + TogetherJS.config.get("creatorUsername");
     }
   };
 
@@ -83,8 +83,9 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     if (includeHashInUrl) {
         if (session.isClient) {
             if (location.href == TogetherJS.config.get("sessionFileUrl")) {
-                var re = /\/\.scratch.([^/]+)/;
-                return (location.href.replace(re, ''));
+                var loc = location.href;
+                var re = /scratchpad([\/])(.*)/;
+                return (loc.substring(0, loc.indexOf('file/') + 'file/'.length) + loc.match(re)[2]);
             }
             else {
                 return " ";
@@ -111,8 +112,9 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
             url: '/scratchpad/' + file,
             type: 'DELETE',
             success: function(result) {
-                location.href = '/';
-                // location.hash = '#/workspace/orionode';
+              //TODO: refresh file tree if possible instead of refreshing page
+              location.href = '/';
+              // location.hash = '#/workspace/orionode';
             }
         });
     }
@@ -444,7 +446,14 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
                 readyForMessages = true;
                 startup.start();
               });
-              ui.activateUI();
+              if (!session.isClient) {
+                TogetherJS.config.get("getUserName")().then(function(username) {
+                  TogetherJS.config("creatorUsername", username);
+                  ui.activateUI();
+                });
+              } else {
+                ui.activateUI();
+              }
               TogetherJS.config.close("enableAnalytics");
               if (TogetherJS.config.get("enableAnalytics")) {
                 require(["analytics"], function (analytics) {

@@ -75,7 +75,8 @@
     // When undefined, attempts to use the browser's language
     lang: undefined,
     fallbackLang: "en-US",
-    sessionFileUrl: null
+    sessionFileUrl: null,
+    creatorUsername: null
   };
 
   var styleSheet = "/togetherjs/togetherjs.css";
@@ -853,11 +854,15 @@
   // as little as possible with the app we are embedded in:
   var hash = location.hash.replace(/^#/, "");
   var m = /&?togetherjs=([^&]*)/.exec(hash);
+  var u = /&?username=([^&]*)/.exec(hash);
   if (m) {
     TogetherJS.startup._joinShareId = m[1];
     TogetherJS.startup.reason = "joined";
     var newHash = hash.substr(0, m.index) + hash.substr(m.index + m[0].length);
     location.hash = newHash;
+  }
+  if (u) {
+    TogetherJS.config("creatorUsername", u[1]);
   }
   if (window._TogetherJSShareId) {
     // A weird hack for something the addon does, to force a shareId.

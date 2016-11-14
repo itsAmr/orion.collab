@@ -1762,9 +1762,9 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     hash = hash.replace(/&?togetherjs-[a-zA-Z0-9]+/, "");
     hash = hash || "#";
     if (!session.isClient) {
-        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId;
+        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(6, hash.length) + "&togetherjs=" + session.shareId + "?username=" + TogetherJS.config.get("creatorUsername");
     } else {
-        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(28, hash.length) + "&togetherjs=" + session.shareId;
+        return location.protocol + "//" + location.host + "/scratchpad" + hash.substring(28, hash.length) + "&togetherjs=" + session.shareId + "?username=" + TogetherJS.config.get("creatorUsername");
     }
   };
 
@@ -1779,8 +1779,9 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
     if (includeHashInUrl) {
         if (session.isClient) {
             if (location.href == TogetherJS.config.get("sessionFileUrl")) {
-                var re = /\/\.scratch.([^/]+)/;
-                return (location.href.replace(re, ''));
+                var loc = location.href;
+                var re = /scratchpad([\/])(.*)/;
+                return (loc.substring(0, loc.indexOf('file/') + 'file/'.length) + loc.match(re)[2]);
             }
             else {
                 return " ";
@@ -1807,8 +1808,9 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
             url: '/scratchpad/' + file,
             type: 'DELETE',
             success: function(result) {
-                location.href = '/';
-                // location.hash = '#/workspace/orionode';
+              //TODO: refresh file tree if possible instead of refreshing page
+              location.href = '/';
+              // location.hash = '#/workspace/orionode';
             }
         });
     }
@@ -2140,7 +2142,14 @@ define('session',["require", "util", "channels", "jquery", "storage"], function 
                 readyForMessages = true;
                 startup.start();
               });
-              ui.activateUI();
+              if (!session.isClient) {
+                TogetherJS.config.get("getUserName")().then(function(username) {
+                  TogetherJS.config("creatorUsername", username);
+                  ui.activateUI();
+                });
+              } else {
+                ui.activateUI();
+              }
               TogetherJS.config.close("enableAnalytics");
               if (TogetherJS.config.get("enableAnalytics")) {
                 require(["analytics"], function (analytics) {
@@ -3067,11 +3076,6 @@ define('windowing',["jquery", "util", "peers", "session"], function ($, util, pe
   }
 
   session.on("resize", function () {
-    if ($(document).height() < 400) {
-      $('#togetherjs-side').css('position', 'relative');
-    } else {
-      $('#togetherjs-side').css('position', 'absolute');
-    }
     var win = $(".togetherjs-modal:visible, .togetherjs-window:visible");
     if (! win.length) {
       return;
@@ -4562,14 +4566,53 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         document.getElementById('sideMenu').childNodes[2].appendChild(menu);
         menu.style.display = 'block';
         menu.style.bottom = 0;
-        if (window.innerHeight > 400) {
+        if (window.innerHeight > 300 + menu.clientHeight) {
           menu.style.position = 'absolute';
         } else {
           menu.style.position = 'relative';
           $('.sideMenuScrollButton').addClass('visible');
         }
+        dimAll();
       }
     }
+
+    //Dim everything other than the editor and sidemenu
+    dimAll = function() {
+      if (!document.getElementById('editor')) {
+        setTimeout(function() {dimAll()}, 2000);
+        return;
+      } else {
+        //The following is taken from http://stackoverflow.com/a/9455598/4488647
+        $('<div id="__msg_overlay">').css({
+              "width" : "100%"
+            , "height" : "100%"
+            , "background" : "#000"
+            , "position" : "fixed"
+            , "top" : "0"
+            , "left" : "0"
+            , "zIndex" : "30"
+            , "MsFilter" : "progid:DXImageTransform.Microsoft.Alpha(Opacity=60)"
+            , "filter" : "alpha(opacity=60)"
+            , "MozOpacity" : 0.6
+            , "KhtmlOpacity" : 0.6
+            , "opacity" : 0.6
+        }).appendTo(document.body);
+        //END
+        document.getElementById('togetherjs-side').style.zIndex = 50;
+        //the runbar needs to be higher due to the dropdown
+        document.getElementById('runBarWrapper').style.zIndex = 55;
+        $('.editorViewerContent').css('z-index',50);
+        $('.textviewTooltip').css('z-index', 50);
+      }
+    }
+
+    reverseDim = function() {
+      $('#__msg_overlay').remove();
+      $('.editorViewerContent').css('z-index', '');
+      $('.textviewTooltip').css('z-index', '');
+      document.getElementById('runBarWrapper').style.zIndex = '';
+    }
+
     dockSideMenu();
 
     fixupAvatars(container);
@@ -5210,6 +5253,7 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
   }
 
   session.on("resize", function () {
+    checkDockScrollNeeded();
     bindMenu();
     bindPicker();
   });
@@ -5276,6 +5320,7 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
 
   session.on("close", function () {
     $('#togetherjs-side').remove();
+    reverseDim();
     if($.browser.mobile) {
       // remove bg overlay
       //$(".overlay").remove();
@@ -5572,6 +5617,10 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         });
       }
       if (this.peer.color) {
+        var colors = $(document).find("#" + this.peer.className("togetherjs-dock-element-"));
+        colors.css({
+          backgroundColor: this.peer.color
+        });
         var colors = container.find("." + this.peer.className("togetherjs-person-bgcolor-"));
         colors.css({
           backgroundColor: this.peer.color
@@ -5694,14 +5743,6 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         });
       }
 
-      // FIXME: turned off for now
-      if( numberOfUsers >= 5 && false) {
-        CollapsedDock();
-      } else {
-        // reset
-
-      }
-
       function styleNewPerson(el, peer) {
         el.css('background-color', peer.color);
         return el;
@@ -5718,6 +5759,7 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
       $("#togetherjs-dock-participants").append(this.dockElement);
       this.dockElement.find(".togetherjs-person").animateDockEntry();
       adjustDockSize(1);
+      checkDockScrollNeeded();
       this.detailElement = templating.sub("participant-window", {
         peer: this.peer
       });
@@ -5760,6 +5802,7 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         this.detailElement.remove();
         this.detailElement = null;
         adjustDockSize(-1);
+        checkDockScrollNeeded();
       }).bind(this));
     },
 
@@ -5806,6 +5849,16 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
       // FIXME: should I get rid of the dockElement?
     }
   });
+
+  //checks if number of users has grown too much and make the sidemenu scrollable if needed.
+  function checkDockScrollNeeded() {
+    if ($(document).height() < 300 + $('#togetherjs-side').height()) {
+      $('#togetherjs-side').css('position', 'relative');
+    }
+    else {
+      $('#togetherjs-side').css('position', 'absolute');
+    }
+  }
 
   function updateChatParticipantList() {
     var live = peers.getAllPeers(true);

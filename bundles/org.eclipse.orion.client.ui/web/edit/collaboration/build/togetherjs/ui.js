@@ -122,14 +122,53 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         document.getElementById('sideMenu').childNodes[2].appendChild(menu);
         menu.style.display = 'block';
         menu.style.bottom = 0;
-        if (window.innerHeight > 400) {
+        if (window.innerHeight > 300 + menu.clientHeight) {
           menu.style.position = 'absolute';
         } else {
           menu.style.position = 'relative';
           $('.sideMenuScrollButton').addClass('visible');
         }
+        dimAll();
       }
     }
+
+    //Dim everything other than the editor and sidemenu
+    dimAll = function() {
+      if (!document.getElementById('editor')) {
+        setTimeout(function() {dimAll()}, 2000);
+        return;
+      } else {
+        //The following is taken from http://stackoverflow.com/a/9455598/4488647
+        $('<div id="__msg_overlay">').css({
+              "width" : "100%"
+            , "height" : "100%"
+            , "background" : "#000"
+            , "position" : "fixed"
+            , "top" : "0"
+            , "left" : "0"
+            , "zIndex" : "30"
+            , "MsFilter" : "progid:DXImageTransform.Microsoft.Alpha(Opacity=60)"
+            , "filter" : "alpha(opacity=60)"
+            , "MozOpacity" : 0.6
+            , "KhtmlOpacity" : 0.6
+            , "opacity" : 0.6
+        }).appendTo(document.body);
+        //END
+        document.getElementById('togetherjs-side').style.zIndex = 50;
+        //the runbar needs to be higher due to the dropdown
+        document.getElementById('runBarWrapper').style.zIndex = 55;
+        $('.editorViewerContent').css('z-index',50);
+        $('.textviewTooltip').css('z-index', 50);
+      }
+    }
+
+    reverseDim = function() {
+      $('#__msg_overlay').remove();
+      $('.editorViewerContent').css('z-index', '');
+      $('.textviewTooltip').css('z-index', '');
+      document.getElementById('runBarWrapper').style.zIndex = '';
+    }
+
     dockSideMenu();
 
     fixupAvatars(container);
@@ -770,6 +809,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
   }
 
   session.on("resize", function () {
+    checkDockScrollNeeded();
     bindMenu();
     bindPicker();
   });
@@ -836,6 +876,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
 
   session.on("close", function () {
     $('#togetherjs-side').remove();
+    reverseDim();
     if($.browser.mobile) {
       // remove bg overlay
       //$(".overlay").remove();
@@ -1132,6 +1173,10 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         });
       }
       if (this.peer.color) {
+        var colors = $(document).find("#" + this.peer.className("togetherjs-dock-element-"));
+        colors.css({
+          backgroundColor: this.peer.color
+        });
         var colors = container.find("." + this.peer.className("togetherjs-person-bgcolor-"));
         colors.css({
           backgroundColor: this.peer.color
@@ -1254,14 +1299,6 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         });
       }
 
-      // FIXME: turned off for now
-      if( numberOfUsers >= 5 && false) {
-        CollapsedDock();
-      } else {
-        // reset
-
-      }
-
       function styleNewPerson(el, peer) {
         el.css('background-color', peer.color);
         return el;
@@ -1278,6 +1315,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       $("#togetherjs-dock-participants").append(this.dockElement);
       this.dockElement.find(".togetherjs-person").animateDockEntry();
       adjustDockSize(1);
+      checkDockScrollNeeded();
       this.detailElement = templating.sub("participant-window", {
         peer: this.peer
       });
@@ -1320,6 +1358,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         this.detailElement.remove();
         this.detailElement = null;
         adjustDockSize(-1);
+        checkDockScrollNeeded();
       }).bind(this));
     },
 
@@ -1366,6 +1405,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       // FIXME: should I get rid of the dockElement?
     }
   });
+
+  //checks if number of users has grown too much and make the sidemenu scrollable if needed.
+  function checkDockScrollNeeded() {
+    if ($(document).height() < 300 + $('#togetherjs-side').height()) {
+      $('#togetherjs-side').css('position', 'relative');
+    }
+    else {
+      $('#togetherjs-side').css('position', 'absolute');
+    }
+  }
 
   function updateChatParticipantList() {
     var live = peers.getAllPeers(true);
