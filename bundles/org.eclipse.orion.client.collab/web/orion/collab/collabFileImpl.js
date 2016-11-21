@@ -1,0 +1,164 @@
+/*******************************************************************************
+ * @license
+ * Copyright (c) 2014 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials are made 
+ * available under the terms of the Eclipse Public License v1.0 
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution 
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html). 
+ * 
+ * Contributors: IBM Corporation - initial API and implementation
+ ******************************************************************************/
+
+/*eslint-env browser, amd*/
+/*global URL*/
+define(["orion/xhr", "orion/Deferred", "orion/encoding-shim", "orion/URL-shim"], function(xhr, Deferred) {
+	
+	function CollabFileImpl(fileBase) {
+		this.fileBase = fileBase;
+	}
+	
+	var GIT_TIMEOUT = 60000;
+
+	CollabFileImpl.prototype = {
+		fetchChildren: function(location) {
+			debugger;
+			var fetchLocation = location;
+			if (fetchLocation===this.fileBase) {
+				return new Deferred().resolve([]);
+			}
+			//If fetch location does not have ?depth=, then we need to add the depth parameter. Otherwise server will not return any children
+			if (fetchLocation.indexOf("?depth=") === -1) { //$NON-NLS-0$
+				fetchLocation += "?depth=1"; //$NON-NLS-0$
+			}
+			return xhr("GET", fetchLocation,{ //$NON-NLS-0$
+				headers: {
+					"Orion-Version": "1", //$NON-NLS-0$  //$NON-NLS-1$
+					"Content-Type": "charset=UTF-8" //$NON-NLS-0$  //$NON-NLS-1$
+				},
+				timeout: GIT_TIMEOUT
+			}).then(function(result) {
+				debugger;
+				var jsonData = result.response ? JSON.parse(result.response) : {};
+				return jsonData.Children || [];
+			});
+		},
+		loadWorkspaces: function() {
+			return this.loadWorkspace(this._repoURL);
+		},
+		loadWorkspace: function(location) {
+			var suffix = "/sharedWorkspace/";
+			if (location && location.indexOf(suffix, location.length - suffix.length) !== -1) {
+				location += "tree/";
+			}
+			
+			return xhr("GET", location,{ //$NON-NLS-0$
+				headers: {
+					"Orion-Version": "1", //$NON-NLS-0$  //$NON-NLS-1$
+					"Content-Type": "charset=UTF-8" //$NON-NLS-0$  //$NON-NLS-1$
+				},
+				timeout: GIT_TIMEOUT
+			}).then(function(result) {
+				var jsonData = result.response ? JSON.parse(result.response) : {};
+				return jsonData || {};
+			});
+		},
+		createProject: function(url, projectName, serverPath, create) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		createFolder: function(parentLocation, folderName) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		createFile: function(parentLocation, fileName) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		deleteFile: function(location) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		moveFile: function(sourceLocation, targetLocation, name) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		copyFile: function(sourceLocation, targetLocation, name) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		read: function(location, isMetadata) {
+			var url = new URL(location, window.location);
+			if (isMetadata) {
+				url.query.set("parts", "meta"); //$NON-NLS-0$  //$NON-NLS-1$
+			}
+			return xhr("GET", url.href, {
+				timeout: GIT_TIMEOUT,
+				headers: { "Orion-Version": "1" }, //$NON-NLS-0$  //$NON-NLS-1$
+				log: false
+			}).then(function(result) {
+				if (isMetadata) {
+					return result.response ? JSON.parse(result.response) : null;
+				} else {
+					return result.response;
+				}
+			});
+		},
+		write: function(location, contents, args) {
+			var url = new URL(location, window.location);
+			
+			var headerData = {
+					"Orion-Version": "1",
+					"Content-Type": "text/plain;charset=UTF-8"
+				};
+			if (args && args.ETag) {
+				headerData["If-Match"] = args.ETag;
+			}
+			var options = {
+				timeout: 15000,
+				headers: headerData,
+				data: contents,
+				log: false
+			};
+						
+			// check if we have raw contents or something else
+			var method = "PUT";
+			if (typeof contents !== "string") {
+				// look for remote content
+				if (contents.sourceLocation) {
+					options.query = {source: contents.sourceLocation};
+					options.data = null;
+				} else if (contents.diff) {
+					method = "POST";
+					headerData["X-HTTP-Method-Override"] = "PATCH";
+					headerData["Content-Type"] = "application/json;charset=UTF-8";
+					options.data = JSON.stringify(options.data);
+				} else {
+					// assume we are putting metadata
+					url.query.set("parts", "meta");
+				}
+			}
+			return xhr(method, url.href, options).then(function(result) {
+				return result.response ? JSON.parse(result.response) : null;
+			}).then(function(result) {
+				if (this.makeAbsolute) {
+					_normalizeLocations(result);
+				}
+				return result;
+			}.bind(this));		
+		},
+		remoteImport: function(targetLocation, options) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		remoteExport: function(sourceLocation, options) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		},
+		readBlob: function(location) {
+			return xhr("GET", location, { //$NON-NLS-0$ 
+				responseType: "arraybuffer", //$NON-NLS-0$ 
+				timeout: GIT_TIMEOUT
+			}).then(function(result) {
+				return result.response;
+			});
+		},
+		writeBlob: function(location, contents, args) {
+			throw new Error("Not supported"); //$NON-NLS-0$ 
+		}
+	};
+	CollabFileImpl.prototype.constructor = CollabFileImpl;
+
+	return CollabFileImpl;
+});

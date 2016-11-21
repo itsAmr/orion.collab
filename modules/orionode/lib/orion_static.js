@@ -53,6 +53,7 @@ exports = module.exports = function(options) {
 		'./bundles/org.eclipse.orion.client.webtools/web',
 		'./bundles/org.eclipse.orion.client.users/web',
 		'./bundles/org.eclipse.orion.client.cf/web',
+		'./bundles/org.eclipse.orion.client.collab/web'
 	].forEach(function(bundlePath) {
 		var path = nodePath.resolve(orionClientRoot, bundlePath);
 		app.use(express.static(path, options));

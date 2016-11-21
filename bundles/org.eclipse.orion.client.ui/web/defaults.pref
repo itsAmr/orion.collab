@@ -7,6 +7,7 @@
 		"edit/content/imageViewerPlugin.html":true,
 		"edit/content/jsonEditorPlugin.html":true,
 		"cfui/plugins/cFPlugin.html":true,
-		"cfui/plugins/cFDeployPlugin.html":true
+		"cfui/plugins/cFDeployPlugin.html":true,
+		"collab/plugins/collabPlugin.html": true
 	}
 }
