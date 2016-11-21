@@ -714,6 +714,7 @@ define([
 						evt.session.apply();
 					}
 				}
+				editor.getModel()._initCollaboration();
 			}
 
 			this._saveEventLogged = false;

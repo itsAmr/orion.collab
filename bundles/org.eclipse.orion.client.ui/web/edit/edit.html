@@ -10,11 +10,32 @@
 		<script src="../requirejs/require.js"></script>
 		<script>
 			/*eslint-env browser, amd*/
+			/* globals TogetherJS */
 			require(["../orion/require-config.js"], function(config){
 				function load() {
 					require(["edit/edit"], null, config.errback);
 				}
 				require(["orion/splash"], load, load);
+			});
+			require(["collaboration/build/togetherjs-min.js"] , function() {
+				TogetherJS.config("hubBase", "http://hubserver.mybluemix.net/");
+				// TogetherJS.config("hubBase", "http://localhost:8080");
+				TogetherJS.config("getUserName", 
+					function() {
+						return new Promise(function(resolve, reject) {
+							$.ajax({
+								url: '/login',
+								type: 'POST',
+								success: function(result) {
+									resolve(result.UserName);
+								},
+								fail: function() {
+									reject();
+								}
+							});
+						});
+					}
+				);
 			});
 		</script>
 	</head>
@@ -38,7 +59,7 @@
 					<div class="fixedToolbarHolder">
 						<div id="editor" class="workingTarget"></div>
 						<div id="replaceCompareTitleDiv" class="replaceCompareTitleDiv"></div>
-						<div id="replaceCompareDiv" class="replaceCompareDiv workingTarget"></div>
+						<div id="replaceCompareDiv"`	 class="replaceCompareDiv workingTarget"></div>
 					</div>
 				</div>
 			</div>
