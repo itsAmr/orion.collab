@@ -76,7 +76,8 @@
     lang: undefined,
     fallbackLang: "en-US",
     sessionFileUrl: null,
-    creatorUsername: null
+    creatorUsername: null,
+    projectSessionID: null
   };
 
   var styleSheet = "/togetherjs/togetherjs.css";
@@ -206,13 +207,20 @@
     document.head.appendChild(script);
   }
 
-  var TogetherJS = window.TogetherJS = function TogetherJS(event) {
+  var TogetherJS = window.TogetherJS = function TogetherJS(projectSessionID) {
+    debugger;
     var session;
     if (TogetherJS.running) {
       session = TogetherJS.require("session");
-      session.close();
-      return;
+      if (projectSessionID != session.shareId) {
+        session.close();
+      }
     }
+    if (!projectSessionID) return;
+
+    TogetherJS.config("projectSessionID", projectSessionID);
+    TogetherJS.config.close("projectSessionID");
+
     TogetherJS.startup.button = null;
     try {
       if (event && typeof event == "object") {
@@ -302,7 +310,7 @@
     if (TogetherJS._loaded) {
       session = TogetherJS.require("session");
       addStyle();
-      session.start();
+      session.start(projectSessionID);
       return;
     }
     // A sort of signal to session.js to tell it to actually

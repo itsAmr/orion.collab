@@ -49,13 +49,12 @@ module.exports.router = function(options) {
 		//if its a workspace, get children and set them as projects, else just get children
 		//else return the files and folders below the workspace requested.
 		else {
-			var workspaceDir = path.join(req.user.workspaceDir, req.params["0"]);
-			var filePath = workspaceDir;
-			var fileRoot = req._parsedUrl.pathname;
+			var filePath = path.join(req.user.workspaceDir, req.params["0"]);
+			var fileRoot = req.params["0"].substring(1);
 			fileUtil.withStatsAndETag(filePath, function(err, stats, etag) {
 				if (err) throw err;
 				if (stats.isDirectory()) {
-					sharedUtil.getChildren(fileRoot, workspaceDir, filePath, req.query.depth ? req.query.depth: 1)
+					sharedUtil.getChildren(fileRoot, filePath, req.query.depth ? req.query.depth: 1)
 					.then(function(children) {
 						// TODO this is basically a File object with 1 more field. Should unify the JSON between workspace.js and file.js
 						children.forEach(function(child) {
@@ -66,10 +65,13 @@ module.exports.router = function(options) {
 						var name = path.basename(filePath);
 						tree = {
 							Name: name,
-							Location: "/sharedWorkspace/tree" + location,
-							ChildrenLocation: "/sharedWorkspace/tree" + location + "?depth=1",
+							Location: "/sharedWorkspace/tree/file/" + location,
+							ChildrenLocation: "/sharedWorkspace/tree/file/" + location + "?depth=1",
 							Children: children,
-							Directory: true
+							Directory: true,
+							Attributes: {
+								hubID: '0123456789'
+							}
 						};
 					})
 					.then(function(){
@@ -92,8 +94,7 @@ module.exports.router = function(options) {
 	}
 
 	function putFile(req, res) {
-		var workspaceDir = path.join(req.user.workspaceDir, req.params["0"]);
-		var filepath = workspaceDir;
+		var filepath = path.join(req.user.workspaceDir, req.params["0"]);
 		var fileRoot = req._parsedUrl.pathname;
 		if (req.params['parts'] === 'meta') {
 			// TODO implement put of file attributes

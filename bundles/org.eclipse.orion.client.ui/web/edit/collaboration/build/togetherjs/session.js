@@ -81,44 +81,29 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
 
   session.currentUrl = function () {
     if (includeHashInUrl) {
-        if (session.isClient) {
-            if (location.href == TogetherJS.config.get("sessionFileUrl")) {
-                var loc = location.href;
-                var re = /scratchpad([\/])(.*)/;
-                return (loc.substring(0, loc.indexOf('file/') + 'file/'.length) + loc.match(re)[2]);
-            }
-            else {
-                return " ";
-            }
-        }
-        else {
-            return location.href;
-        }
+      if (location.hash.indexOf('/sharedWorkspace') == 1) {
+        //get everything after 'workspace name'
+        var workspace = 'mo/mourad/OrionContent/'
+        var index = location.hash.indexOf(workspace);
+        return location.hash.substring(index + workspace.length, location.hash.length);
+      } else {
+        var loc = '/file/';
+        var index = location.hash.indexOf(loc);
+        return location.hash.substring(index + loc.length, location.hash.length);
+      }
+        // if (location.href == TogetherJS.config.get("sessionFileUrl")) {
+        //     var loc = location.href;
+        //     var re = /scratchpad([\/])(.*)/;
+        //     return (loc.substring(0, loc.indexOf('file/') + 'file/'.length) + loc.match(re)[2]);
+        // }
+        // else {
+        //     return location.href;
+        // }
     } else {
       return location.href.replace(/#.*/, "");
     }
   };
 
-  session.creatorHasLeft = function() {
-    session.close("the file owner has left the session.");
-  };
-
-  session.deleteTempFiles = function(reason) {
-    //delete local files
-    if (confirm("Session terminated" + (typeof reason == 'string' ? (" because " + reason) :  ".") + "\nDo you want to delete the collaboration file from your workspace?")) {
-        storage.tab.storage.lastFile =  "";
-        var file = TogetherJS.config.get("sessionFileUrl").split("#/file/").pop();
-        $.ajax({
-            url: '/scratchpad/' + file,
-            type: 'DELETE',
-            success: function(result) {
-              //TODO: refresh file tree if possible instead of refreshing page
-              location.href = '/';
-              // location.hash = '#/workspace/orionode';
-            }
-        });
-    }
-  };
 
   /****************************************
    * Message handling/dispatching
@@ -182,6 +167,19 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   }
 
   session.send = function (msg) {
+    if (msg.type == 'request-init-content') {
+      //check peers
+      debugger;
+      var thePeers = peers.getAllPeers();
+      var myUrl = session.currentUrl();
+      var withYou = thePeers.some(function(peer) {
+        return peer.url == myUrl;
+      });
+      if (!withYou) {
+        session.received_initContent = true;
+        return;
+      }
+    }
     if (DEBUG && IGNORE_MESSAGES.indexOf(msg.type) == -1) {
       console.info("Send:", msg);
     }
@@ -312,7 +310,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
 
   initIdentityId.done = initIdentityId();
 
-  function initShareId() {
+  function initShareId(projectSessionID) {
     return util.Deferred(function (def) {
       var hash = location.hash;
       var shareId = session.shareId;
@@ -326,17 +324,6 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
           // Like, below, this *also* means we got the shareId from the hash
           // (in togetherjs.js):
           shareId = TogetherJS.startup._joinShareId;
-        }
-      }
-      if (! shareId) {
-        // FIXME: I'm not sure if this will ever happen, because togetherjs.js should
-        // handle it
-        var m = /&?togetherjs=([^&]*)/.exec(hash);
-        if (m) {
-          isClient = ! m[1];
-          shareId = m[2];
-          var newHash = hash.substr(0, m.index) + hash.substr(m.index + m[0].length);
-          location.hash = newHash;
         }
       }
       return storage.tab.get("status").then(function (saved) {
@@ -405,6 +392,8 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
         }
         session.isClient = isClient;
         session.shareId = shareId;
+        /**tempppppp**/
+        session.shareId = projectSessionID;
         session.emit("shareId");
         def.resolve(session.shareId);
       });
@@ -427,11 +416,15 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
       }
     });
   }
-  session.start = function () {
+  session.start = function (projectSessionID) {
+    if (!projectSessionID) {
+      projectSessionID = TogetherJS.config.get("projectSessionID");
+    }
+    assert(projectSessionID);
     TogetherJS.config("sessionFileUrl", location.href);
     initStartTarget();
     initIdentityId().then(function () {
-      initShareId().then(function () {
+      initShareId(projectSessionID).then(function () {
         readyForMessages = false;
         openChannel();
         require(["ui"], function (ui) {
@@ -477,9 +470,6 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     TogetherJS.running = false;
     var event = new CustomEvent("destroyCollabAnnotations", {"detail": {"all": true}});
     document.dispatchEvent(event);
-    if (session.isClient) {
-        session.deleteTempFiles(reason);
-    }
     var msg = {type: "bye"};
     if (reason) {
       msg.reason = reason;
@@ -522,10 +512,6 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     // needed because when message arives from peer this variable will be checked to
     // decide weather to show actions or not
     sendHello(false);
-    //if creator switches files, session over
-    if (/*!session.isClient &&*/ session.currentUrl() !== TogetherJS.config.get("sessionFileUrl")) {
-        session.close("you have navigated away from the file.");
-    }
   }
 
   function resizeEvent() {

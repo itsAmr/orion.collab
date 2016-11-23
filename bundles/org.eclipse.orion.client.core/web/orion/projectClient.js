@@ -93,6 +93,9 @@ define([
         },
         
 		getProject: function (metadata) {
+			//get project's session ID
+			var projectSessionID = metadata.Attributes.hubID || '0123456789';
+			TogetherJS(projectSessionID);
 			if (!metadata || metadata.Projects) {
 				return new Deferred().resolve(null);
 			}

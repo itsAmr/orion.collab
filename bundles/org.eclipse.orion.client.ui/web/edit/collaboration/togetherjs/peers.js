@@ -516,10 +516,6 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
     peer.bye();
   });
 
-  session.hub.on("close_yourself", function (msg) {
-    session.creatorHasLeft();
-  });
-
   var checkActivityTask = null;
 
   session.on("start", function () {

@@ -136,15 +136,6 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
     },
 
     requestInit: function() {
-      //if client then get the initial content
-      if (session.isClient) {
-        //make sure init content is received within x seconds
-        setTimeout(function() {
-            if (!session.received_initContent) {
-                session.close("failed to receive initial content, the file owner is not in the session.");
-            }
-        }, session.CONTENTRECEIVE_TIMER);
-
         var msg = {
             type: "request-init-content",
             element: location
@@ -152,10 +143,6 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
 
         //request content
         session.send(msg);
-      } else {
-        //this is the owner so no need to ask for init
-        session.received_initContent = true;
-      }
     },
 
     makeInit: function () {
@@ -234,6 +221,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
   function startOrionTracking(model) {
     var tracker = new OrionEditor(model);
     ot.simpleHistorySingleton = ot.SimpleHistory(session.clientId, tracker.getContent(), 1);
+    debugger;
     liveTrackers.push(tracker);
   }
 
@@ -356,6 +344,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
 
     session.hub.on("request-init-content", function (msg) {
         console.log("initcontent requested!!!");
+        debugger;
         if (! msg.sameUrl) {
           return;
         } else {
@@ -453,9 +442,9 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
         inRemoteUpdate = true;
         try {
           if(tracker) {
-            delta = ot.TextReplace.fromChange(curr, typeof value == 'undefined' ? history.current : value);
-            tracker.setContent({msg: delta});
-            // tracker.update({text: history.current});
+            // delta = ot.TextReplace.fromChange(curr, typeof value == 'undefined' ? history.current : value);
+            // tracker.setContent({msg: delta});
+            tracker.update({text: history.current});
           }
         } finally {
           inRemoteUpdate = false;
@@ -468,7 +457,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
     * Once the session has been initialized, clear the queue by applying all changes,
     * and then process the current change.
     */
-    if (session.isClient && !session.received_initContent) {
+    if (!session.received_initContent) {
         console.log("received change while initializing");
         queueWhileInit.push(msg);
         return;
@@ -514,7 +503,6 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
   }
 
   function setInit() {
-    destroyTrackers();
     //be ready to receive the textModel
     document.addEventListener("modelHere", modelReceived);
     //Ask for the textModel
@@ -528,6 +516,9 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
    * Is called when the textModel is received, now we can start tracking.
   */
   function modelReceived(e) {
+    initSent = false;
+    session.received_initContent = false;
+    destroyTrackers();
     startOrionTracking(e.detail.model);
     requestLineInit();
   }

@@ -86,15 +86,16 @@ function treeJSON(name, location, timestamp, dir, length, addNameToLoc) {
         LocalTimeStamp: timestamp,
         Directory: dir,
         Length: length,
-        Location: "/sharedWorkspace/tree" + location,
-        ChildrenLocation: dir ? "/sharedWorkspace/tree" + location + "?depth=1": undefined,
+        Location: location ? "/sharedWorkspace/tree/file/" + location : "/sharedWorkspace/tree/",
+        ChildrenLocation: dir ? (location ? "/sharedWorkspace/tree/file/" + location + "?depth=1": "/sharedWorkspace/tree/" + "?depth=1") : undefined,
+        // Parents: fileUtil.getParents('/sharedWorkspace/tree/file/', location),
         Attributes: {
             ReadOnly: false
         }
     };
 }
 
-function getChildren(fileRoot, workspaceDir, directory, depth, excludes) {
+function getChildren(fileRoot, directory, depth, excludes) {
 	return fs.readdirAsync(directory)
 	.then(function(files) {
 		return Promise.map(files, function(file) {
@@ -127,24 +128,24 @@ function getSharedWorkspaces(req, res, callback) {
         var sharedSpaces = [
             {
                 Name: "potato",
-                ContentLocation: '\\file\\mo\\mourad\\OrionContent',
+                ContentLocation: 'mo\\mourad\\OrionContent',
             },
             {
                 Name: "level1",
-                ContentLocation: '\\file\\mo\\mourad\\OrionContent'
+                ContentLocation: 'mo\\mourad\\OrionContent'
             },
             {
                 Name: "web",
-                ContentLocation: '\\file\\mo\\mourad\\OrionContent',
+                ContentLocation: 'mo\\mourad\\OrionContent',
             },
             {
                 Name: ".orion",
-                ContentLocation: '\\file\\Bo\\Bogdan\\OrionContent'
+                ContentLocation: 'Bo\\Bogdan\\OrionContent'
             }
         ];
         function add(lst) {
             lst.forEach(function(workspace) {
-                workspaces.push(sharedJSON(workspace.Name, workspace.ContentLocation, 0, true, 0));
+                workspaces.push(workspace);
                 if (workspace.Children) add(workspace.Children);
             });
         }
