@@ -22,6 +22,7 @@ define(["util", "jquery"], function (util, $) {
   elementFinder.elementLocation = function elementLocation(el) {
     assert(el !== null, "Got null element");
     if (el instanceof $) {
+      if (el.length == 0) return null;
       // a jQuery element
       el = el[0];
     }

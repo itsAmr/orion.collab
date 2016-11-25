@@ -13,17 +13,19 @@ var fileUtil = require('./fileUtil');
 var express = require('express');
 var tree = require('./shared/tree');
 var sharedUtil = require('./shared/sharedUtil');
+var sharedDecorator = require('./shared/sharedDecorator').sharedDecorator;
 
 module.exports = function(options) {
-	var workspaceRoot = options.root;
 	var fileRoot = options.fileRoot;
 	if (!fileRoot) { throw new Error('options.root path required'); }
-	if (!workspaceRoot) { throw new Error('options.root path required'); }
 	
 	var router = express.Router();
 
-	router.use("/sharedUtil", sharedUtil.router(options));
 	router.use("/tree", tree.router(options));
+	router.use("/project", require('./shared/db/sharedProjects')(options));
+	router.use("/user", require('./shared/db/userProjects')(options));
+	fileUtil.addDecorator(sharedDecorator);
+	sharedUtil(options);
 	return router;
 }
 

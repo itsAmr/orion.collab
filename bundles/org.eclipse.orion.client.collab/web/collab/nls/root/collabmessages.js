@@ -9,5 +9,5 @@
  ******************************************************************************/
 /*eslint-env browser, amd*/
 define({//Default message bundle
-	"SharedWorkspace": "Shared Workspaces" //$NON-NLS-0$  //$NON-NLS-1$
+	"SharedWorkspace": "Shared Workspace" //$NON-NLS-0$  //$NON-NLS-1$
 });

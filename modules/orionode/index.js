@@ -45,16 +45,6 @@ function startServer(options) {
 			}
 		}
 
-		function checkAuthenticatedTwo(req, res, next) {
-			if (!req.user) {
-				res.writeHead(401, "Not authenticated");
-				res.end();
-			} else {
-				req.user.workspaceDir = options.workspaceDir;
-				next();
-			}
-		}
-
 		// API handlers
 		if (options.configParams["orion.single.user"]) {
 			app.use(/* @callback */ function(req, res, next){
@@ -70,8 +60,8 @@ function startServer(options) {
 		} else {
 			app.use(require('./lib/user')(options));
 		}
-
-		app.use('/sharedWorkspace', checkAuthenticatedTwo, require('./lib/sharedWorkspace')({ root: '/sharedWorkspace', fileRoot: '/file', options: options }));
+		
+		app.use('/sharedWorkspace', checkAuthenticated, require('./lib/sharedWorkspace')({ root: '/sharedWorkspace', fileRoot: '/file', options: options }));
 		app.use('/site', checkAuthenticated, require('./lib/sites')(options));
 		app.use('/task', checkAuthenticated, require('./lib/tasks').router({ root: '/task' }));
 		app.use('/filesearch', checkAuthenticated, require('./lib/search')(options));

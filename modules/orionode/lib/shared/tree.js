@@ -17,84 +17,106 @@ var mime = require('mime');
 var sharedUtil = require('./sharedUtil');
 var fileUtil = require('../fileUtil');
 var fs = require('fs');
+var sharedProjects = require('./db/sharedProjects');
 
 module.exports = {};
 
 module.exports.router = function(options) {
-	var fileRoot = options.fileRoot;
-	if (!fileRoot) { throw new Error('options.root is required'); }
+	var workspaceRoot = options.options.workspaceDir;
+	if (!workspaceRoot) { throw new Error('options.options.workspaceDir required'); }
 
 	return express.Router()
-	.get('/', getTree)
+	.get('/', getSharedWorkspace)
 	.get('/file*', getTree)
 	.put('/file*', putFile);
 
-	function getTree(req, res) {
-		var tree;
-		//if its the base call, return all workspaces that are shared with the user
-		if (!req.params["0"]) {
-			return sharedUtil.getSharedWorkspaces(req, res, function(workspaces) {
-				var tree = sharedUtil.treeJSON("/", "", 0, true, 0, false);
-				var children = tree.Children = [];
-				function add(workspaces) {
-					workspaces.forEach(function(workspace) {
-						children.push(sharedUtil.treeJSON(workspace.Name, workspace.ContentLocation, 0, true, 0));
-						if (workspace.Children) add(workspace.Children);
-					});
-				}
-				add(workspaces, tree);
-				res.status(200).json(tree);
+	/**
+	 * Get shared projects for the user.
+	 */
+	function getSharedWorkspace(req, res) {
+		//if its the base call, return all Projects that are shared with the user
+		return sharedUtil.getSharedProjects(req, res, function(projects) {
+			var tree = sharedUtil.treeJSON("/", "", 0, true, 0, false);
+			var children = tree.Children = [];
+			function add(projects) {
+				projects.forEach(function(project) {
+					children.push(sharedUtil.treeJSON(project.Name, project.Location, 0, true, 0, false));
+					if (project.Children) add(project.Children);
+				});
+			}
+			add(projects, tree);
+			tree["Projects"] = children.map(function(c) {
+				return {
+					Id: c.Name,
+					Location:  c.Location,
+				};
 			});
-		}
-		//if its a workspace, get children and set them as projects, else just get children
-		//else return the files and folders below the workspace requested.
-		else {
-			var filePath = path.join(req.user.workspaceDir, req.params["0"]);
-			var fileRoot = req.params["0"].substring(1);
-			fileUtil.withStatsAndETag(filePath, function(err, stats, etag) {
-				if (err) throw err;
-				if (stats.isDirectory()) {
-					sharedUtil.getChildren(fileRoot, filePath, req.query.depth ? req.query.depth: 1)
-					.then(function(children) {
-						// TODO this is basically a File object with 1 more field. Should unify the JSON between workspace.js and file.js
-						children.forEach(function(child) {
-							child.Id = child.Name;
-						});
-						// tree = treeJSON(location, name, 0, true, 0);
-						location = fileRoot;
-						var name = path.basename(filePath);
-						tree = {
-							Name: name,
-							Location: "/sharedWorkspace/tree/file/" + location,
-							ChildrenLocation: "/sharedWorkspace/tree/file/" + location + "?depth=1",
-							Children: children,
-							Directory: true,
-							Attributes: {
-								hubID: '0123456789'
-							}
-						};
-					})
-					.then(function(){
-						res.status(200).json(tree);
-					})
-					.catch(api.writeError.bind(null, 500, res));
-				} else if (stats.isFile()) {
-						if (req.query.parts === "meta") {
-							var name = path.basename(filePath);
-							var result = sharedUtil.treeJSON(name, fileRoot, 0, false, 0, false);
-							result.ETag = etag;
-							// createParents(result);
-							return res.status(200).json(result);
-						} else {
-							sharedUtil.getFile(res, filePath, stats, etag);
-						}
-				}
-			});
-		}
+			res.status(200).json(tree);
+		});
 	}
 
+	/**
+	 * return files and folders below current folder or retrieve file contents.
+	 */
+	function getTree(req, res) {
+		var tree;
+		var filePath = path.join(workspaceRoot, req.params["0"]);
+		var fileRoot = req.params["0"];
+		fileUtil.withStatsAndETag(filePath, function(err, stats, etag) {
+			if (err) throw err;
+			if (stats.isDirectory()) {
+				sharedUtil.getChildren(fileRoot, filePath, req.query.depth ? req.query.depth: 1)
+				.then(function(children) {
+					// TODO this is basically a File object with 1 more field. Should unify the JSON between workspace.js and file.js
+					children.forEach(function(child) {
+						child.Id = child.Name;
+					});
+					location = fileRoot;
+					var name = path.basename(filePath);
+					tree = {
+						Name: name,
+						Location: "/sharedWorkspace/tree/file" + location,
+						ChildrenLocation: "/sharedWorkspace/tree/file" + location + "?depth=1",
+						Children: children,
+						Directory: true
+					};
+				})
+				.then(function() {
+					return sharedProjects.getHubID(filePath);
+				})
+				.then(function(hub){
+					if (hub) {
+						tree.Attributes = {};
+						tree["Attributes"].hubID = hub;
+					}
+					res.status(200).json(tree);
+				})
+				.catch(api.writeError.bind(null, 500, res));
+			} else if (stats.isFile()) {
+					if (req.query.parts === "meta") {
+						var name = path.basename(filePath);
+						var result = sharedUtil.treeJSON(name, fileRoot, 0, false, 0, false);
+						result.ETag = etag;
+						// createParents(result);
+						sharedProjects.getHubID(filePath)
+						.then(function(hub){
+							if (hub) {
+								result["Attributes"].hubID = hub;
+							}
+							return res.status(200).json(result);
+						});
+					} else {
+						sharedUtil.getFile(res, filePath, stats, etag);
+					}
+			}
+		});
+	}
+
+	/**
+	 * For file save.
+	 */
 	function putFile(req, res) {
-		var filepath = path.join(req.user.workspaceDir, req.params["0"]);
+		var filepath = path.join(workspaceRoot, req.params["0"]);
 		var fileRoot = req._parsedUrl.pathname;
 		if (req.params['parts'] === 'meta') {
 			// TODO implement put of file attributes
@@ -136,7 +158,7 @@ module.exports.router = function(options) {
 
 	function writeFileMetadata(fileRoot, req, res, filepath, stats, etag) {
 		var result;
-		return fileJSON(fileRoot, req.user.workspaceDir, filepath, stats)
+		return fileJSON(fileRoot, workspaceRoot, filepath, stats)
 		.then(function(originalJson){
 			result = originalJson;
 			if (etag) {
