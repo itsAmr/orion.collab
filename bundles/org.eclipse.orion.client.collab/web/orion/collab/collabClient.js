@@ -1,4 +1,3 @@
-
 /*eslint-env browser, amd */
 define(['orion/editor/eventTarget'], function(mEventTarget) {
 	
@@ -37,7 +36,10 @@ define(['orion/editor/eventTarget'], function(mEventTarget) {
 		this.collabSocket.addEventListener("Open", self.socketConnected.bind(self));
 //		this.collabSocket.addEventListener("Closed", self.socketDisconnected.bind(self));
 		this.socket = this.collabSocket.socket;
-		window.addEventListener("hashchange", function() {self.destroyOT.call(self)})
+		window.addEventListener("hashchange", function() {self.destroyOT.call(self)});
+		if (this.socket && !this.socket.closed && this.textView) {
+			this.initSocket();
+		}
 	}
 
 	CollabClient.prototype = {

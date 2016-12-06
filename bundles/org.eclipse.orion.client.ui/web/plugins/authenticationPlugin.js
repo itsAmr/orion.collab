@@ -41,6 +41,9 @@ define(["orion/xhr", 'orion/xsrfUtils', "orion/plugin", "domReady!"], function(x
 					timeout: 15000
 				}).then(function(result) {
 					loginData = result.response ? JSON.parse(result.response) : null;
+					if (loginData.jwt) {
+						localStorage.setItem('orionSocket.authToken', loginData.jwt)
+					}
 					return loginData;
 				}, function(error) {
 					loginData = null;
@@ -53,6 +56,7 @@ define(["orion/xhr", 'orion/xsrfUtils', "orion/plugin", "domReady!"], function(x
 			},
 			logout: function() { /* don't wait for the login response, notify anyway */
 				loginData = null;
+				localStorage.removeItem('orionSocket.authToken')
 				return xhr("POST", "../logout", { //$NON-NLS-0$
 					headers: {
 						"Orion-Version": "1" //$NON-NLS-0$

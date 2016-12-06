@@ -130,20 +130,22 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
     console.info("Connecting to", session.hubUrl(), location.href);
     var c = channels.WebSocketChannel(session.hubUrl(), session.clientId);
     c.myUrl = session.currentUrl();
-    window.require(['orion/collab/collabClient'], function(collabClient) {
-      collabClient.collabSocket.setSocket(c);
-    });
     c.onmessage = function (msg) {
-      if (! readyForMessages) {
-        if (DEBUG) {
-          console.info("In (but ignored for being early):", msg);
-        }
-        return;
+      if (msg.type == 'authenticated') {
+        window.require(['orion/collab/collabClient'], function(collabClient) {
+          collabClient.collabSocket.setSocket(c);
+        });
       }
+      // if (! readyForMessages) {
+      //   if (DEBUG) {
+      //     console.info("In (but ignored for being early):", msg);
+      //   }
+      //   return;
+      // }
       if (DEBUG && IGNORE_MESSAGES.indexOf(msg.type) == -1) {
         console.info("In:", msg);
       }
-      if (! peers) {
+      if (! peers && msg.type !== 'init-connection') {
         // We're getting messages before everything is fully initialized
         console.warn("Message received before all modules loaded (ignoring):", msg);
         return;
@@ -252,6 +254,14 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
 
   session.hub.on("who", function (msg) {
     sendHello(true);
+  });
+
+  session.hub.on("init-connection", function (msg) {
+    var msg = {
+      'type': 'authenticate',
+      'token': localStorage.getItem('orionSocket.authToken')
+    };
+    session.send(msg);
   });
 
   function processFirstHello(msg) {
