@@ -1014,13 +1014,18 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         attrs.peer.nudge();
         return false;
       });
-      // el.find(".togetherjs-follow").click(function () {
-      //   var url = attrs.peer.url;
-      //   if (attrs.peer.urlHash) {
-      //     url += attrs.peer.urlHash;
-      //   }
-      //   location.href = url;
-      // });
+      el.find(".togetherjs-follow").click(function () {
+        var url = attrs.peer.url;
+        // if (attrs.peer.urlHash) {
+        //   url += attrs.peer.urlHash;
+        // }
+        if (location.href.indexOf("sharedWorkspace") !== -1) {
+          url = location.href.substring(0, location.href.indexOf('OrionContent/') + 'OrionContent/'.length) + url;
+        } else {
+          url = location.origin + location.pathname + '#/file/' + url;
+        }
+        location.href = url;
+      });
       var notify = ! attrs.sameUrl;
       if (attrs.sameUrl && ! $("#" + realId).length) {
         // Don't bother showing a same-url notification, if no previous notification
@@ -1196,11 +1201,17 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       if (this.peer.title) {
         urlName += ")";
       }
-      container.find("." + this.peer.className("togetherjs-person-url-title-"))
-        .text(urlName);
       var url = this.peer.url;
       if (this.peer.urlHash) {
         url += this.peer.urlHash;
+      }
+      container.find("." + this.peer.className("togetherjs-person-url-title-"))
+        .text(url);
+      //get the correct link to go to that file.
+      if (location.href.indexOf("sharedWorkspace") !== -1) {
+        url = location.href.substring(0, location.href.indexOf('OrionContent/') + 'OrionContent/'.length) + url;
+      } else {
+        url = location.origin + location.pathname + '#/file/' + url;
       }
       container.find("." + this.peer.className("togetherjs-person-url-"))
         .attr("href", url);
@@ -1322,9 +1333,9 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       var followId = this.peer.className("togetherjs-person-status-follow-");
       this.detailElement.find('[for="togetherjs-person-status-follow"]').attr("for", followId);
       this.detailElement.find('#togetherjs-person-status-follow').attr("id", followId);
-      // this.detailElement.find(".togetherjs-follow").click(function () {
-      //   location.href = $(this).attr("href");
-      // });
+      this.detailElement.find(".togetherjs-follow").click(function () {
+        location.href = $(this).attr("href");
+      });
       this.detailElement.find(".togetherjs-nudge").click((function () {
         this.peer.nudge();
       }).bind(this));
@@ -1336,6 +1347,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
         // Following doesn't happen until the window is closed
         // FIXME: should we tell the user this?
       });
+      this.maybeHideDetailWindow = this.maybeHideDetailWindow.bind(this);
+      session.on("hide-window", this.maybeHideDetailWindow);
       ui.container.append(this.detailElement);
       this.dockElement.click((function () {
         if (this.detailElement.is(":visible")) {
@@ -1393,6 +1406,16 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
       // }
     },
 
+    maybeHideDetailWindow: function (windows) {
+      if (this.detailElement && windows[0] && windows[0][0] === this.detailElement[0]) {
+        if (this.followCheckbox[0].checked) {
+          this.peer.follow();
+        } else {
+          this.peer.unfollow();
+        }
+      }
+    },
+
     dockClick: function () {
       // FIXME: scroll to person
     },
@@ -1403,6 +1426,7 @@ define(["require", "jquery", "util", "session", "templates", "templating", "peer
 
     destroy: function () {
       // FIXME: should I get rid of the dockElement?
+      session.off("hide-window", this.maybeHideDetailWindow);
     }
   });
 

@@ -12,7 +12,7 @@
 /*eslint-env browser, amd*/
 /*global URL*/
 define(["orion/xhr", "orion/Deferred", "orion/encoding-shim", "orion/URL-shim"], function(xhr, Deferred) {
-	
+
 	function CollabFileImpl(fileBase) {
 		this.fileBase = fileBase;
 	}
@@ -21,7 +21,6 @@ define(["orion/xhr", "orion/Deferred", "orion/encoding-shim", "orion/URL-shim"],
 
 	CollabFileImpl.prototype = {
 		fetchChildren: function(location) {
-			debugger;
 			var fetchLocation = location;
 			if (fetchLocation===this.fileBase) {
 				return new Deferred().resolve([]);
@@ -37,7 +36,6 @@ define(["orion/xhr", "orion/Deferred", "orion/encoding-shim", "orion/URL-shim"],
 				},
 				timeout: GIT_TIMEOUT
 			}).then(function(result) {
-				debugger;
 				var jsonData = result.response ? JSON.parse(result.response) : {};
 				return jsonData.Children || [];
 			});

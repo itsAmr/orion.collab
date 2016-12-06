@@ -20,8 +20,9 @@ define([
 	'orion/objects',
 	'orion/PageUtil',
 	'orion/editor/textModelFactory',
-	'orion/metrics'
-], function(messages, mNavigatorRenderer, i18nUtil, Deferred, EventTarget, objects, PageUtil, mTextModelFactory, mMetrics) {
+	'orion/metrics',
+	'orion/collab/collabClient'
+], function(messages, mNavigatorRenderer, i18nUtil, Deferred, EventTarget, objects, PageUtil, mTextModelFactory, mMetrics, collabClient) {
 
 	function Idle(options){
 		this._document = options.document || document;
@@ -447,26 +448,31 @@ define([
 					that._errorSaving = true;
 					return done();
 				}
-				def.then(successHandler, function(error) {
-					// expected error - HTTP 412 Precondition Failed
-					// occurs when file is out of sync with the server
-					if (error.status === 412) {
-						var forceSave = window.confirm(messages.saveOutOfSync);
-						if (forceSave) {
-							// repeat save operation, but without ETag
-							var redef = that.fileClient.write(resource, contents);
-							if (progress) {
-								redef = progress.progress(redef, i18nUtil.formatMessage(messages.savingFile, input));
+				if (collabClient.collabSocket.socket && collabClient.collabSocket.socket.socket) {
+					//TEMPORARY TO BYPASS FILE AUTO-SAVE/OUT-OF-SYNC RELOAD DURING COLLABORATION;
+					that.setAutoLoadEnabled(false);
+				} else {
+					def.then(successHandler, function(error) {
+						// expected error - HTTP 412 Precondition Failed
+						// occurs when file is out of sync with the server
+						if (error.status === 412) {
+							var forceSave = window.confirm(messages.saveOutOfSync);
+							if (forceSave) {
+								// repeat save operation, but without ETag
+								var redef = that.fileClient.write(resource, contents);
+								if (progress) {
+									redef = progress.progress(redef, i18nUtil.formatMessage(messages.savingFile, input));
+								}
+								redef.then(successHandler, errorHandler);
+							} else {
+								return done();
 							}
-							redef.then(successHandler, errorHandler);
 						} else {
-							return done();
+							// unknown error
+							errorHandler(error);
 						}
-					} else {
-						// unknown error
-						errorHandler(error);
-					}
-				});
+					});
+				}
 				return metadata._savingDeferred;
 			}
 
@@ -537,10 +543,10 @@ define([
 				if (oldResource !== newResource || encodingChanged) {
 					if (this._autoSaveEnabled) {
 						this.save();
-					} else if (!window.confirm(messages.confirmUnsavedChanges)) {
-						window.location.hash = oldLocation;
-						return;
-					}
+					} //else if (!window.confirm(messages.confirmUnsavedChanges)) {
+					// 	window.location.hash = oldLocation;
+					// 	return;
+					// }
 				}
 			}
 			var editorChanged = editor && oldInput.editor !== input.editor;
@@ -714,9 +720,8 @@ define([
 						evt.session.apply();
 					}
 				}
-				if (editor.getModel()){
-					editor.getModel()._initCollaboration();
-				}
+				evt.type = 'ModelLoaded';
+				this.editor.dispatchEvent(evt);
 			}
 
 			this._saveEventLogged = false;

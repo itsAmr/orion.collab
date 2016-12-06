@@ -144,9 +144,9 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
       }
       // FIXME: I can't decide if this is the only time we need to emit
       // this message (and not .update() or other methods)
-      // if (this.following) {
-      //   session.emit("follow-peer", this);
-      // }
+      if (this.following) {
+        session.emit("follow-peer", this);
+      }
     },
 
     update: function (attrs) {
@@ -216,15 +216,21 @@ define(["util", "session", "storage", "require", "templates"], function (util, s
 
   // FIXME: I can't decide where this should actually go, seems weird
   // that it is emitted and handled in the same module
-  // session.on("follow-peer", function (peer) {
-  //   if (peer.url != session.currentUrl()) {
-  //     var url = peer.url;
-  //     if (peer.urlHash) {
-  //       url += peer.urlHash;
-  //     }
-  //     location.href = url;
-  //   }
-  // });
+  session.on("follow-peer", function (peer) {
+    if (peer.url != session.currentUrl()) {
+      var url = peer.url;
+      // if (peer.urlHash) {
+      //   url += peer.urlHash;
+      // }
+      //get the correct link to go to that file.
+      if (location.href.indexOf("sharedWorkspace") !== -1) {
+        url = location.href.substring(0, location.href.indexOf('OrionContent/') + 'OrionContent/'.length) + url;
+      } else {
+        url = location.origin + location.pathname + '#/file/' + url;
+      }
+      location.href = url;
+    }
+  });
 
   Peer.peers = {};
 

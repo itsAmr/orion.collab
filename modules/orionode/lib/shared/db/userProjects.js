@@ -33,7 +33,8 @@ mongoose.Promise = Promise;
 
 module.exports = function(options) {
 	var app = express.Router();
-	
+	module.exports.getUserSharedProjects = getUserSharedProjects;
+
 	var userProjectsSchema = new mongoose.Schema({
 		username: {
 			type: String,
@@ -82,6 +83,26 @@ module.exports = function(options) {
 	 */
 	function removeProjectReferences(projectpath) {
 		
+	}
+
+	function getUserSharedProjects(username) {
+        return new Promise.resolve([
+            {
+                Name: "potato",
+                Location: '\\mo\\mourad\\OrionContent\\potato',
+                HubID: '0123456789'
+            },
+            {
+                Name: "level1",
+                Location: '\\mo\\mourad\\OrionContent\\level1',
+                HubID: '0123456789'
+            },
+            {
+                Name: "web",
+                Location: '\\mo\\mourad\\OrionContent\\web',
+                HubID: '0123456789'
+            }
+        ]);
 	}
 	
 	/*************************************/

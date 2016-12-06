@@ -28,20 +28,3 @@ module.exports = function(options) {
 	sharedUtil(options);
 	return router;
 }
-
-// module.exports = function(options) {
-// 	/**
-// 	 * @returns {String} The URL of the workspace middleware, with context path.
-// 	 */
-// 	function originalWorkspaceRoot(req) {
-// 		return workspaceRoot;
-// 	}
-// 	function originalFileRoot(req) {
-// 		return fileRoot;
-// 	}
-// 	function makeProjectContentLocation(req, projectName) {
-// 		return api.join(originalFileRoot(req), projectName);
-// 	}
-// 	function makeProjectLocation(req, projectName) {
-// 		return api.join(fileRoot, projectName);
-// 	}

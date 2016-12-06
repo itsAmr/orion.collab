@@ -18,6 +18,8 @@ var fileUtil = require('../fileUtil');
 var express = require('express');
 var bodyParser = require('body-parser');
 var Promise = require('bluebird');
+var sharedProjects = require('./db/sharedProjects')
+var userProjects = require('./db/userProjects');
 
 module.exports = function(options) {
     var workspaceRoot = options.options.workspaceDir;
@@ -115,30 +117,8 @@ module.exports = function(options) {
      */
     function getSharedProjects(req, res, callback) {
         var projects = [];
-        // db.getList()
-        // .then(function(sharedSpaces) {
-            var sharedProjects = [
-                {
-                    Name: "potato",
-                    Location: '\\mo\\mourad\\OrionContent\\potato',
-                    HubID: '0123456789'
-                },
-                {
-                    Name: "level1",
-                    Location: '\\mo\\mourad\\OrionContent\\level1',
-                    HubID: '0123456789'
-                },
-                {
-                    Name: "web",
-                    Location: '\\mo\\mourad\\OrionContent\\web',
-                    HubID: '0123456789'
-                }
-                // {
-                //     Name: ".orion",
-                //     ContentLocation: '\\Bo\\Bogdan\\OrionContent\\.orion',
-                //     HubID: '0123456789'
-                // }
-            ];
+        userProjects.getUserSharedProjects()
+        .then(function(sharedProjects) {
             function add(lst) {
                 lst.forEach(function(project) {
                     projects.push(project);
@@ -147,7 +127,6 @@ module.exports = function(options) {
             }
             add(sharedProjects);
             callback(projects);
-        // });
-        return;
+        });
     }
 }

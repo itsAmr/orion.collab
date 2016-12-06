@@ -13,7 +13,6 @@
  
 /*eslint-env browser, amd*/
 define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'orion/util'], function(mEventTarget, mRegex, util) {
-
 	/**
 	 * Constructs a new TextModel with the given text and default line delimiter.
 	 *
@@ -629,23 +628,6 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 				addedLineCount: addedLineCount
 			};
 			this.onChanged(modelChangedEvent);
-		},
-		/**
-		 * Hooks the collaboration events to the textModel.
-		 * <p>
-		 * The TogetherJS files communicate with the textModel directly through these events.
-		 * </p>
-		 */
-		_initCollaboration: function() {
-			//For receivers, or page reload. The model is sent as soon as it is ready.
-		    var event = new CustomEvent("modelHere", {"detail": {"model": this}});
-		    document.dispatchEvent(event);
-			that = this;
-			//when the session is started manually, the model is sent through this.
-			document.addEventListener('modelNeeded', function(e) {
-			    var event = new CustomEvent("modelHere", {"detail": {"model": that}});
-			    document.dispatchEvent(event);
-			}, true);
 		}
 	};
 	mEventTarget.EventTarget.addMixin(TextModel.prototype);

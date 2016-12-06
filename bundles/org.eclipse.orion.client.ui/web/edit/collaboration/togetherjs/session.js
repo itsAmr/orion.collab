@@ -30,12 +30,14 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   // This is the key we use for localStorage:
   var localStoragePrefix = "togetherjs.";
   // This is the channel to the hub:
-  var channel = null;
+  session.channel = null;
 
   // Setting, essentially global:
   session.AVATAR_SIZE = 90;
 
   var MAX_SESSION_AGE = 30*24*60*60*1000; // 30 days
+
+  session.ot = null;
 
   /****************************************
    * URLs
@@ -123,9 +125,14 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   var readyForMessages = false;
 
   function openChannel() {
-    assert(! channel, "Attempt to re-open channel");
+    // assert(! session.channel, "Attempt to re-open channel");
+    // session.channel = null;
     console.info("Connecting to", session.hubUrl(), location.href);
-    var c = channels.WebSocketChannel(session.hubUrl());
+    var c = channels.WebSocketChannel(session.hubUrl(), session.clientId);
+    c.myUrl = session.currentUrl();
+    window.require(['orion/collab/collabClient'], function(collabClient) {
+      collabClient.collabSocket.setSocket(c);
+    });
     c.onmessage = function (msg) {
       if (! readyForMessages) {
         if (DEBUG) {
@@ -162,14 +169,43 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
       session.hub.emit(msg.type, msg);
       TogetherJS._onmessage(msg);
     };
-    channel = c;
-    session.router.bindChannel(channel);
+    session.channel = c;
+    session.router.bindChannel(session.channel);
+    TogetherJS.connected = true;
+  }
+  
+  session.editorLoaded = function(model) {
+    session.textModel = model;
+    if (!session.channel) {
+      setTimeout(function() {
+        session.editorLoaded(model);
+      }, 2000);
+      return;
+    }
+    var myUrl = session.currentUrl();
+    var msg = {
+      'type': 'join-document',
+      'currentUrl': myUrl
+    }
+    session.send(msg);
+  };
+
+  session.startOT = function(revision, model, operation) {
+    session.ot = new ot.EditorClient(revision-1, [], session.channel, new ot.OrionAdapter(model));
+    session.channel.trigger('operation', operation);
+  };
+
+  session.addClientData = function(msg) {
+    msg.name = peers.Self.name || peers.Self.defaultName,
+    msg.color =  peers.Self.color,
+    msg.url = session.currentUrl(),
+    msg.urlHash =  location.hash
+    return msg;
   }
 
   session.send = function (msg) {
     if (msg.type == 'request-init-content') {
       //check peers
-      debugger;
       var thePeers = peers.getAllPeers();
       var myUrl = session.currentUrl();
       var withYou = thePeers.some(function(peer) {
@@ -184,7 +220,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
       console.info("Send:", msg);
     }
     msg.clientId = session.clientId;
-    channel.send(msg);
+    session.channel.send(msg);
   };
 
   session.appSend = function (msg) {
@@ -485,8 +521,8 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
         saved.date = Date.now();
         storage.tab.set("status", saved);
       }
-      channel.close();
-      channel = null;
+      session.channel.close();
+      session.channel = null;
       session.shareId = null;
       session.emit("shareId");
       TogetherJS.emit("close");
@@ -511,6 +547,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   function hashchangeEvent() {
     // needed because when message arives from peer this variable will be checked to
     // decide weather to show actions or not
+    session.channel.myUrl = session.currentUrl();
     sendHello(false);
   }
 
@@ -524,7 +561,7 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
 
   util.testExpose({
     getChannel: function () {
-      return channel;
+      return session.channel;
     }
   });
 

@@ -121,8 +121,17 @@
       <p class="togetherjs-participant-window-row"><strong>{{ gettext('Role:') }}</strong>
         <span class="togetherjs-person-role"></span>
       </p>
+      <p class="togetherjs-participant-window-row"><strong>{{ gettext('Currently at:') }}</strong>
+        <a class="togetherjs-person-url togetherjs-person-url-title"></a>
+      </p>
       <p class="togetherjs-participant-window-row"><strong>{{ gettext('Status:') }}</strong>
         <span class="togetherjs-person-status"></span>
+      </p>
+      <p class="togetherjs-participant-window-row"><strong class="togetherjs-float-left">{{ gettext('Follow this participant:') }}</strong>
+        <label class="togetherjs-follow-question togetherjs-float-left" for="togetherjs-person-status-follow">
+          <input type="checkbox" id="togetherjs-person-status-follow">
+        </label>
+        <span class="togetherjs-clear"></span>
       </p>
     </section>
   </div>

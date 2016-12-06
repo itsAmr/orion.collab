@@ -45,6 +45,22 @@ function startServer(options) {
 			}
 		}
 
+		/**
+		 * This method ensures that the websocket trying to retrieve and save content is authenticated.
+		 * HubID (for identifying the project), user token for knowing who the user is.
+		 */
+		function checkCollabAuthenticated(req, res, next) {
+			if (req.user) {
+				req.user.workspaceDir = options.workspaceDir + (req.user.workspace ? "/" + req.user.workspace : "");
+				next();
+			} else if (typeof req.query['hubID'] !== 'undefined'){
+				next();
+			} else {
+				res.writeHead(401, "Not authenticated");
+				res.end();
+			}
+		}
+
 		// API handlers
 		if (options.configParams["orion.single.user"]) {
 			app.use(/* @callback */ function(req, res, next){
@@ -61,7 +77,7 @@ function startServer(options) {
 			app.use(require('./lib/user')(options));
 		}
 		
-		app.use('/sharedWorkspace', checkAuthenticated, require('./lib/sharedWorkspace')({ root: '/sharedWorkspace', fileRoot: '/file', options: options }));
+		app.use('/sharedWorkspace', checkCollabAuthenticated, require('./lib/sharedWorkspace')({ root: '/sharedWorkspace', fileRoot: '/file', options: options }));
 		app.use('/site', checkAuthenticated, require('./lib/sites')(options));
 		app.use('/task', checkAuthenticated, require('./lib/tasks').router({ root: '/task' }));
 		app.use('/filesearch', checkAuthenticated, require('./lib/search')(options));

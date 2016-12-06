@@ -17,9 +17,12 @@
 				}
 				require(["orion/splash"], load, load);
 			});
+			require(["collaboration/ot.js"], function(ot) {
+				//just load it so that it exports the global variable
+			});
 			require(["collaboration/build/togetherjs-min.js"] , function() {
-				TogetherJS.config("hubBase", "http://hubserver.mybluemix.net/");
-				// TogetherJS.config("hubBase", "http://localhost:8080");
+				// TogetherJS.config("hubBase", "http://hubserver.mybluemix.net/");
+				TogetherJS.config("hubBase", "http://9.24.170.221:8080");
 				TogetherJS.config("getUserName", 
 					function() {
 						return new Promise(function(resolve, reject) {

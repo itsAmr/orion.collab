@@ -28,7 +28,9 @@ module.exports.router = function(options) {
 	return express.Router()
 	.get('/', getSharedWorkspace)
 	.get('/file*', getTree)
-	.put('/file*', putFile);
+	.put('/file*', putFile)
+	.get('/load*', loadFile)
+	.put('/save*', saveFile);
 
 	/**
 	 * Get shared projects for the user.
@@ -93,21 +95,21 @@ module.exports.router = function(options) {
 				})
 				.catch(api.writeError.bind(null, 500, res));
 			} else if (stats.isFile()) {
-					if (req.query.parts === "meta") {
-						var name = path.basename(filePath);
-						var result = sharedUtil.treeJSON(name, fileRoot, 0, false, 0, false);
-						result.ETag = etag;
-						// createParents(result);
-						sharedProjects.getHubID(filePath)
-						.then(function(hub){
-							if (hub) {
-								result["Attributes"].hubID = hub;
-							}
-							return res.status(200).json(result);
-						});
-					} else {
-						sharedUtil.getFile(res, filePath, stats, etag);
-					}
+				if (req.query.parts === "meta") {
+					var name = path.basename(filePath);
+					var result = sharedUtil.treeJSON(name, fileRoot, 0, false, 0, false);
+					result.ETag = etag;
+					// createParents(result);
+					sharedProjects.getHubID(filePath)
+					.then(function(hub){
+						if (hub) {
+							result["Attributes"].hubID = hub;
+						}
+						return res.status(200).json(result);
+					});
+				} else {
+					sharedUtil.getFile(res, filePath, stats, etag);
+				}
 			}
 		});
 	}
@@ -117,7 +119,7 @@ module.exports.router = function(options) {
 	 */
 	function putFile(req, res) {
 		var filepath = path.join(workspaceRoot, req.params["0"]);
-		var fileRoot = req._parsedUrl.pathname;
+		var fileRoot = req.params["0"];
 		if (req.params['parts'] === 'meta') {
 			// TODO implement put of file attributes
 			res.sendStatus(501);
@@ -181,5 +183,36 @@ module.exports.router = function(options) {
 			result.ChildrenLocation = {pathname: result.Location, query: {depth:1}};
 			return Promise.resolve(result);
 		}
+	}
+
+	/**
+	* Get request from websocket server to load a file. Requires project HUBID and relative file path.
+	**/
+	function loadFile(req, res) {
+		var relativeFilePath = req.params["0"];
+		var hubid = req.query['hubID'];
+
+		return sharedProjects.getProjectPathFromHubID(hubid)
+		.then(function(filepath) {
+			//remove project name from path
+			filepath = filepath.substring(0, filepath.lastIndexOf('\\'));
+			filepath = path.join(filepath, relativeFilePath);
+			req.params["0"] = filepath;
+			getTree(req, res);
+		});
+	}
+
+	function saveFile(req, res) {
+		var relativeFilePath = req.params["0"];
+		var hubid = req.query['hubID'];
+
+		return sharedProjects.getProjectPathFromHubID(hubid)
+		.then(function(filepath) {
+			//remove project name from path
+			filepath = filepath.substring(0, filepath.lastIndexOf('\\'));
+			filepath = path.join(filepath, relativeFilePath);
+			req.params["0"] = filepath;
+			putFile(req, res);
+		});
 	}
 };

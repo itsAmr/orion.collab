@@ -38,6 +38,7 @@ module.exports = function(options) {
 
 	var app = express.Router();
 	module.exports.getHubID = getHubID;
+	module.exports.getProjectPathFromHubID = getProjectPathFromHubID;
 
 	var sharedProjectsSchema = new mongoose.Schema({
 		location: {
@@ -131,6 +132,20 @@ module.exports = function(options) {
 		var ans = projs[project];
         return Promise.resolve(ans);
     }
+
+
+	/**
+	* returns the project path associated with the given hib id (if exists)
+	**/
+	function getProjectPathFromHubID(id) {
+		var projs = {
+			'0123456789': '\\mo\\mourad\\OrionContent\\potato',
+			'890721397120': '\\mo\\mourad\\OrionContent\\level1',
+			'12838901273': '\\mo\\mourad\\OrionContent\\web'
+		}
+		var ans = projs[id];
+		return Promise.resolve(ans);
+	}
 
     /**
      * Removes the root server workspace, and trailing file tree within project.
