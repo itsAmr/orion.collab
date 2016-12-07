@@ -32,7 +32,7 @@ module.exports = function(options) {
     module.exports.projectExists = projectExists;
 
 	function projectExists(fullpath) {
-        return true;
+        return fs.existsSync(fullpath);
 	}
 
     function getFile(res, filepath, stats, etag) {
@@ -113,11 +113,11 @@ module.exports = function(options) {
     };
 
     /**
-     * Returns the projects (path) shared to this user.
+     * Returns the projects (Location and name) shared to this user.
      */
     function getSharedProjects(req, res, callback) {
         var projects = [];
-        userProjects.getUserSharedProjects()
+        userProjects.getUserSharedProjects(req.user.username)
         .then(function(sharedProjects) {
             function add(lst) {
                 lst.forEach(function(project) {
