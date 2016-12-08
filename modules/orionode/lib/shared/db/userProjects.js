@@ -119,7 +119,7 @@ module.exports = function(options) {
 		.then(function(doc) {
 			var projects = doc.sharedProjects;
 			projects = projects.map(function(project) {
-				var name = path.basename(project);
+				var name = path.win32.basename(project);
 				return {'Name': name, 'Location': project};
 			});
 			return projects;

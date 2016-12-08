@@ -74,7 +74,7 @@ module.exports.router = function(options) {
 						child.Id = child.Name;
 					});
 					location = fileRoot;
-					var name = path.basename(filePath);
+					var name = path.win32.basename(filePath);
 					tree = {
 						Name: name,
 						Location: "/sharedWorkspace/tree/file" + location,
@@ -96,7 +96,7 @@ module.exports.router = function(options) {
 				.catch(api.writeError.bind(null, 500, res));
 			} else if (stats.isFile()) {
 				if (req.query.parts === "meta") {
-					var name = path.basename(filePath);
+					var name = path.win32.basename(filePath);
 					var result = sharedUtil.treeJSON(name, fileRoot, 0, false, 0, false);
 					result.ETag = etag;
 					// createParents(result);
@@ -177,7 +177,7 @@ module.exports.router = function(options) {
 		var isDir = stats.isDirectory();
 		if (!isDir) {
 			var wwwpath = api.toURLPath(filepath.substring(workspaceDir.length + 1));
-			var name = path.basename(filepath);
+			var name = path.win32.basename(filepath);
 			var timeStamp = stats.mtime.getTime(),
 			result = sharedUtil.treeJSON(name, fileRoot, timeStamp, isDir, 0, false);
 			result.ChildrenLocation = {pathname: result.Location, query: {depth:1}};
@@ -195,7 +195,7 @@ module.exports.router = function(options) {
 		return sharedProjects.getProjectPathFromHubID(hubid)
 		.then(function(filepath) {
 			//remove project name from path
-			filepath = filepath.substring(0, filepath.lastIndexOf('\\'));
+			filepath = filepath.substring(0, filepath.lastIndexOf(path.sep));
 			filepath = path.join(filepath, relativeFilePath);
 			req.params["0"] = filepath;
 			getTree(req, res);
@@ -209,7 +209,7 @@ module.exports.router = function(options) {
 		return sharedProjects.getProjectPathFromHubID(hubid)
 		.then(function(filepath) {
 			//remove project name from path
-			filepath = filepath.substring(0, filepath.lastIndexOf('\\'));
+			filepath = filepath.substring(0, filepath.lastIndexOf(path.sep));
 			filepath = path.join(filepath, relativeFilePath);
 			req.params["0"] = filepath;
 			putFile(req, res);

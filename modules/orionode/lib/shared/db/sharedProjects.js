@@ -165,7 +165,7 @@ module.exports = function(options) {
         if (index === -1) throw new Error('The project is not in the correct server.');
         index += workspaceRoot.length;
         filepath = filepath.substring(index);
-        return filepath.split("\\").slice(0,5).join("\\");
+        return filepath.split(path.sep).slice(0,5).join(path.sep);
     }
 
 	/**END OF HELPER FUNCTIONS**/
