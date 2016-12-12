@@ -13,7 +13,6 @@
 var express = require('express'),
 	expressSession = require('express-session'),
 	MongoStore = require('connect-mongo')(expressSession),
-	passport = require('passport'),
 	cookieParser = require('cookie-parser'),
 	bodyParser = require('body-parser'),
 	mongoose = require('mongoose'),
@@ -40,6 +39,7 @@ module.exports = function(options) {
 
 	var app = express.Router();
 	module.exports.getUserSharedProjects = getUserSharedProjects;
+	module.exports.removeProjectReferences = removeProjectReferences;
 
 	var userProjectsSchema = new mongoose.Schema({
 		username: {
@@ -83,8 +83,7 @@ module.exports = function(options) {
 	/**
 	 * Adds project to user's shared projects.
 	 */
-	function addProjectToUser(user, projectpath) {
-		var project = projectsCollection.getProjectRoot(projectpath);
+	function addProjectToUser(user, project) {
 		return addUser(user)
 		.then(function(doc) {
 			return userProject.findOneAndUpdate({username: user}, {$addToSet: {'sharedProjects': project} }).exec();
@@ -94,27 +93,26 @@ module.exports = function(options) {
 	/**
 	 * Removes a project from a user's shared projects.
 	 */
-	function removeProjectFromUser(user, projectpath) {
-		var project = projectsCollection.getProjectRoot(projectpath);
-
-		return userProject.findOneAndUpdate({username: user}, {$pull: {'sharedProjects': { $in: [project]}} });
+	function removeProjectFromUser(user, project) {
+		return userProject.findOneAndUpdate({username: user}, {$pull: {'sharedProjects': { $in: [project]}} }).exec();
 	}
 	
 	/**
 	 * Removes all references from project (project made private by user).
-	 * Should take object Id rather than path? As should everything else?
 	 */
-	function removeProjectReferences(projectpath) {
-		
+	function removeProjectReferences(userlist, project) {
+		var promises = [];
+		userlist.forEach(function(user) {
+			promises.push(removeProjectFromUser(user, project));
+		});
+
+		return Promise.all(promises);
 	}
 
 	/**
 	 * returns a list of projects shared to the user.
 	 */
 	function getUserSharedProjects(user) {
-		// var query = userProject.findOne({'username': user});
-		// query.select('sharedProjects');
-		// query.exec()
 		return userProject.findOne({'username': user}, 'sharedProjects')
 		.then(function(doc) {
 			var projects = doc.sharedProjects;
@@ -128,10 +126,6 @@ module.exports = function(options) {
 	
 	/**END OF HELPER FUNCTIONS**/
 	
-	app.post('/', function(req, res) {
-
-	});
-	
 	/**
 	 * Adds a project to a user's shared project list.
 	 */
@@ -140,12 +134,15 @@ module.exports = function(options) {
 		var project = req.body.project;
 		var user = req.body.username;
 		project = path.join(workspaceRoot, req.user.workspace, project);
-		
+
 		if (!sharedUtil.projectExists(project)) {
 			throw new Error("Project does not exist");
 		}
 
-		addProjectToUser(user, project)
+		project = projectsCollection.getProjectRoot(project);
+
+		projectsCollection.addUserToProject(user, project)
+		.then(addProjectToUser(user, project))
 		.then(function(result) {
 			res.end();
 		});
@@ -159,8 +156,10 @@ module.exports = function(options) {
 		var project = req.body.project;
 		var user = req.body.username;
 		project = path.join(workspaceRoot, req.user.workspace, project);
+		project = projectsCollection.getProjectRoot(project);
 
-		removeProjectFromUser(user, project)
+		projectsCollection.removeUserFromProject(user, project)
+		.then(removeProjectFromUser(user, project))
 		.then(function(result) {
 			res.end();
 		});

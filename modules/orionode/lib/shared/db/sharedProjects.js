@@ -25,7 +25,8 @@ function projectJSON(project) {
 	return {
 		Location: project.projectpath,
         HubID: project.hubid,
-        Owner: project.username
+        Owner: project.username,
+        Users: project.users
 	};
 }
 
@@ -37,11 +38,14 @@ module.exports = function(options) {
 
 	var sharedUtil = require('../sharedUtil');
 	var path = require('path');
+	var userProjectsCollection = require('./userProjects');
 
 	var app = express.Router();
 	module.exports.getHubID = getHubID;
 	module.exports.getProjectPathFromHubID = getProjectPathFromHubID;
 	module.exports.getProjectRoot = getProjectRoot;
+	module.exports.addUserToProject = addUserToProject;
+	module.exports.removeUserFromProject = removeUserFromProject;
 
 	var sharedProjectsSchema = new mongoose.Schema({
 		location: {
@@ -56,7 +60,8 @@ module.exports = function(options) {
         },
         owner: {
 			type: String
-		}
+		},
+		users: []
 	});
 	
 	var sharedProject = mongoose.model('sharedProject', sharedProjectsSchema);
@@ -90,21 +95,26 @@ module.exports = function(options) {
 	/**
 	 * Adds the project and a new hubID to the sharedProjects db document.
 	 */
-	function addProject(projectpath) {
-		var proj = getProjectRoot(projectpath);
+	function addProject(project) {
 		var hub = generateUniqueHubId();
 		//TODO Also add name of project owner? Replace by projectJSON all over the file.
-		return sharedProject.create({location: proj, hubid: hub});
+		return sharedProject.create({location: project, hubid: hub});
 	}
 
 	/**
 	 * Removes project from shared projects.
 	 * Also removes all references from the other table.
 	 */
-	function removeProject(projectpath) {
-		var proj = getProjectRoot(projectpath);
-		//TODO remove all references from userproject collection too
-		return sharedProject.remove({location: proj});
+	function removeProject(project) {
+		return sharedProject.findOne({'location': project}).exec()
+		.then(function(doc) {
+			if (doc.users.length > 0) {
+				return userProjectsCollection.removeProjectReferences(doc.users, project);
+			}
+		})
+		.then(function() {
+			return sharedProject.remove({location: project});
+		});
 	}
 	
 	/**
@@ -168,6 +178,42 @@ module.exports = function(options) {
         return filepath.split(path.sep).slice(0,5).join(path.sep);
     }
 
+	/**
+	 * Returns the list of users that the project is shared with.
+	 */
+	function getUsersInProject(project) {
+		var query = sharedProject.findOne({location: project});
+
+		return query.exec()
+		.then(function(doc) {
+			return doc ? doc.users : undefined;
+		});
+	}
+
+	/**
+	 * Adds user to project's user list.
+	 */
+	function addUserToProject(user, project) {
+		return sharedProject.findOne({'location': project}).exec()
+		.then(function(doc) {
+			if (doc.users.indexOf(user) === -1) {
+				return sharedProject.findOneAndUpdate({'location': project}, {$addToSet: {'users': user} }).exec();
+			} else {
+				//user already there
+			}
+		});
+	}
+
+	/**
+	 * Remove user from project's user list.
+	 */
+	function removeUserFromProject(user, project) {
+		return sharedProject.findOne({'location': project}).exec()
+		.then(function(doc) {
+			return sharedProject.findOneAndUpdate({'location': project}, {$pull: {'users': { $in: [user]}} }).exec();
+		});
+	}
+
 	/**END OF HELPER FUNCTIONS**/
 
 	app.get('/', function(req, res) {
@@ -180,9 +226,12 @@ module.exports = function(options) {
 	app.post('/shareProject', function(req, res) {
 		var project = req.body.project;
 		project = path.join(workspaceRoot, req.user.workspace, project);
+
 		if (!sharedUtil.projectExists(project)) {
 			throw new Error("Project does not exist");
 		}
+
+		project = getProjectRoot(project);
 
 		//if add project was successful, return
 		addProject(project)
@@ -197,9 +246,12 @@ module.exports = function(options) {
 	app.delete('/unshareProject', function(req, res) {
 		var project = req.body.project;
 		project = path.join(workspaceRoot, req.user.workspace, project);
+
 		if (!sharedUtil.projectExists(project)) {
 			throw new Error("Project does not exist");
 		}
+
+		project = getProjectRoot(project);
 
 		//if remove project was successful, return 200
 		removeProject(project)
