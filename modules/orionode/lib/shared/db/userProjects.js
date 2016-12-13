@@ -47,7 +47,7 @@ module.exports = function(options) {
 			unique: true,
 			required: true
 		},
-		sharedProjects : [String] //or ObjectId for reference?
+		sharedProjects : [String]
 	});
 	
 	var userProject = mongoose.model('userProject', userProjectsSchema);
@@ -115,6 +115,9 @@ module.exports = function(options) {
 	function getUserSharedProjects(user) {
 		return userProject.findOne({'username': user}, 'sharedProjects')
 		.then(function(doc) {
+			if (!doc) {
+				return undefined;
+			}
 			var projects = doc.sharedProjects;
 			projects = projects.map(function(project) {
 				var name = path.win32.basename(project);

@@ -46,6 +46,7 @@ module.exports = function(options) {
 	module.exports.getProjectRoot = getProjectRoot;
 	module.exports.addUserToProject = addUserToProject;
 	module.exports.removeUserFromProject = removeUserFromProject;
+	module.exports.getUsersInProject = getUsersInProject;
 
 	var sharedProjectsSchema = new mongoose.Schema({
 		location: {
@@ -61,7 +62,7 @@ module.exports = function(options) {
         owner: {
 			type: String
 		},
-		users: []
+		users: [String]
 	});
 	
 	var sharedProject = mongoose.model('sharedProject', sharedProjectsSchema);
@@ -172,7 +173,7 @@ module.exports = function(options) {
      */
     function getProjectRoot(filepath) {
         var index = filepath.indexOf(workspaceRoot);
-        if (index === -1) throw new Error('The project is not in the correct server.');
+        if (index === -1) return undefined;
         index += workspaceRoot.length;
         filepath = filepath.substring(index);
         return filepath.split(path.sep).slice(0,5).join(path.sep);
@@ -182,9 +183,7 @@ module.exports = function(options) {
 	 * Returns the list of users that the project is shared with.
 	 */
 	function getUsersInProject(project) {
-		var query = sharedProject.findOne({location: project});
-
-		return query.exec()
+		return sharedProject.findOne({'location': project}).exec()
 		.then(function(doc) {
 			return doc ? doc.users : undefined;
 		});
@@ -215,10 +214,6 @@ module.exports = function(options) {
 	}
 
 	/**END OF HELPER FUNCTIONS**/
-
-	app.get('/', function(req, res) {
-		res.end();
-	});
 
 	/**
 	 * req.body.project should be the project name.

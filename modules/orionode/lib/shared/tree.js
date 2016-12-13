@@ -27,8 +27,8 @@ module.exports.router = function(options) {
 
 	return express.Router()
 	.get('/', getSharedWorkspace)
-	.get('/file*', getTree)
-	.put('/file*', putFile)
+	.get('/file*', ensureAccess, getTree)
+	.put('/file*', ensureAccess, putFile)
 	.get('/load*', loadFile)
 	.put('/save*', saveFile);
 
@@ -54,6 +54,21 @@ module.exports.router = function(options) {
 				};
 			});
 			res.status(200).json(tree);
+		});
+	}
+
+	function ensureAccess(req, res, next) {
+		var project = sharedProjects.getProjectRoot(path.join(workspaceRoot, req.params["0"]));
+		var username = req.user.username;
+
+		sharedProjects.getUsersInProject(project)
+		.then(function(users) {
+			if (!project || !users || !users.some(function(user) {return user == username})) {
+				res.writeHead(401, "Not authenticated");
+				res.end();
+			} else {
+				next();
+			}
 		});
 	}
 

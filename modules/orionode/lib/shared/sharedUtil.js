@@ -125,7 +125,9 @@ module.exports = function(options) {
                     if (project.Children) add(project.Children);
                 });
             }
-            add(sharedProjects);
+            if (sharedProjects) {
+	            add(sharedProjects);
+            }
             callback(projects);
         });
     }
