@@ -459,7 +459,7 @@ define([
 				domNode: this._parent,
 				syntaxHighlighter: this.syntaxHighlighter
 			});
-			var collab = new mCollabClient.collabClient(editor);
+			var collab = new mCollabClient.collabClient(editor, this.inputManager);
 			editor.id = "orion.editor"; //$NON-NLS-0$
 			editor.processParameters = function(params) {
 				parseNumericParams(params, ["start", "end", "line", "offset", "length"]); //$NON-NLS-4$ //$NON-NLS-3$ //$NON-NLS-2$ //$NON-NLS-1$ //$NON-NLS-5$

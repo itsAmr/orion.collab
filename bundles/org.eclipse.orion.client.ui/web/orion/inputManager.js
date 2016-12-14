@@ -20,9 +20,8 @@ define([
 	'orion/objects',
 	'orion/PageUtil',
 	'orion/editor/textModelFactory',
-	'orion/metrics',
-	'orion/collab/collabClient'
-], function(messages, mNavigatorRenderer, i18nUtil, Deferred, EventTarget, objects, PageUtil, mTextModelFactory, mMetrics, collabClient) {
+	'orion/metrics'
+], function(messages, mNavigatorRenderer, i18nUtil, Deferred, EventTarget, objects, PageUtil, mTextModelFactory, mMetrics) {
 
 	function Idle(options){
 		this._document = options.document || document;
@@ -161,6 +160,7 @@ define([
 				}
 			}.bind(this));
 		}
+		this.collabRunning = false;
 	}
 	objects.mixin(InputManager.prototype, /** @lends orion.editor.InputManager.prototype */ {
 		/**
@@ -220,7 +220,7 @@ define([
 					progress(fileClient.read(resource, true), messages.ReadingMetadata, fileURI).then(function(data) {
 						if (this._fileMetadata && !this._fileMetadata._saving && this._fileMetadata.Location === data.Location && this._fileMetadata.ETag !== data.ETag) {
 							this._fileMetadata = objects.mixin(this._fileMetadata, data);
-							if (!editor.isDirty() || window.confirm(messages.loadOutOfSync)) {
+							if (!this.collabRunning && (!editor.isDirty() || window.confirm(messages.loadOutOfSync))) {
 								progress(fileClient.read(resource), messages.Reading, fileURI).then(function(contents) {
 									editor.setInput(fileURI, null, contents, null, nofocus);
 									this._clearUnsavedChanges();
@@ -352,11 +352,11 @@ define([
 		onFocus: function() {
 			// If there was an error while auto saving, auto save is temporarily disabled and
 			// we retry saving every time the editor gets focus
-			if (this._autoSaveEnabled && this._errorSaving) {
+			if (this._autoSaveEnabled && this._errorSaving && !this.collabRunning) {
 				this.save();
 				return;
 			}
-			if (this._autoLoadEnabled && this._fileMetadata) {
+			if (this._autoLoadEnabled && this._fileMetadata && !this.collabRunning) {
 				this.load();
 			}
 		},
@@ -448,31 +448,26 @@ define([
 					that._errorSaving = true;
 					return done();
 				}
-				if (collabClient.collabSocket.socket && collabClient.collabSocket.socket.socket) {
-					//TEMPORARY TO BYPASS FILE AUTO-SAVE/OUT-OF-SYNC RELOAD DURING COLLABORATION;
-					that.setAutoLoadEnabled(false);
-				} else {
-					def.then(successHandler, function(error) {
-						// expected error - HTTP 412 Precondition Failed
-						// occurs when file is out of sync with the server
-						if (error.status === 412) {
-							var forceSave = window.confirm(messages.saveOutOfSync);
-							if (forceSave) {
-								// repeat save operation, but without ETag
-								var redef = that.fileClient.write(resource, contents);
-								if (progress) {
-									redef = progress.progress(redef, i18nUtil.formatMessage(messages.savingFile, input));
-								}
-								redef.then(successHandler, errorHandler);
-							} else {
-								return done();
+				def.then(successHandler, function(error) {
+					// expected error - HTTP 412 Precondition Failed
+					// occurs when file is out of sync with the server
+					if (error.status === 412) {
+						var forceSave = window.confirm(messages.saveOutOfSync);
+						if (forceSave) {
+							// repeat save operation, but without ETag
+							var redef = that.fileClient.write(resource, contents);
+							if (progress) {
+								redef = progress.progress(redef, i18nUtil.formatMessage(messages.savingFile, input));
 							}
+							redef.then(successHandler, errorHandler);
 						} else {
-							// unknown error
-							errorHandler(error);
+							return done();
 						}
-					});
-				}
+					} else {
+						// unknown error
+						errorHandler(error);
+					}
+				});
 				return metadata._savingDeferred;
 			}
 
@@ -499,7 +494,7 @@ define([
 				};
 				this._idle = new Idle(options);
 				this._idle.addEventListener("Idle", function () { //$NON-NLS-0$
-					if (!this._errorSaving) {
+					if (!this._errorSaving && !this.collabRunning) {
 						this._autoSaveActive = true;
 						this.save().then(function() {
 							this._autoSaveActive = false;
@@ -541,12 +536,12 @@ define([
 				var oldResource = oldInput.resource;
 				var newResource = input.resource;
 				if (oldResource !== newResource || encodingChanged) {
-					if (this._autoSaveEnabled) {
+					if (this._autoSaveEnabled && !this.collabRunning) {
 						this.save();
-					} //else if (!window.confirm(messages.confirmUnsavedChanges)) {
-					// 	window.location.hash = oldLocation;
-					// 	return;
-					// }
+					} else if (!this.collabRunning && !window.confirm(messages.confirmUnsavedChanges)) {
+						window.location.hash = oldLocation;
+						return;
+					}
 				}
 			}
 			var editorChanged = editor && oldInput.editor !== input.editor;

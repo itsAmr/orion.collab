@@ -25,8 +25,9 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 	* As soon as the collabSocket.socket value gets set or unset, a collabClient needs to be notified.
 	* So when creating a collabClient, need to have a listener on changes to collabSocket.socket
 	*/
-	function CollabClient(editor) {
+	function CollabClient(editor, inputManager) {
 		this.editor = editor;
+		this.inputManager = inputManager;
 		this.textView = null;
 		var self = this;
 		mEventTarget.EventTarget.addMixin(collabSocket);
@@ -36,7 +37,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		this.otOrionAdapter = null;
 		this.collabSocket = collabSocket;
 		this.collabSocket.addEventListener("Open", self.socketConnected.bind(self));
-//		this.collabSocket.addEventListener("Closed", self.socketDisconnected.bind(self));
+		this.collabSocket.addEventListener("Closed", self.socketDisconnected.bind(self));
 		this.socket = this.collabSocket.socket;
 		window.addEventListener("hashchange", function() {self.destroyOT.call(self);});
 		this.myLine = 0;
@@ -50,7 +51,9 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 
 	CollabClient.prototype = {
 		initSocket: function() {
+			this.inputManager.collabRunning = true;
 			var self = this;
+			this.textView.addEventListener('Selection', self.selectionListener.bind(self));
 			
 			//Add the necessary functions to the socket so we can run an OT session.
 		  	this.socket.sendOperation = function (revision, operation, selection) {
@@ -162,23 +165,21 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 			if (this.ot && this.otOrionAdapter) {
 				this.otOrionAdapter.detach();
 				this.ot = null;
-				var msg = {
-			      'type': 'leave-document',
-			      'clientId': this.socket.clientId
-			    };
-			    this.socket.send(msg);
+				if (this.socket) {
+					var msg = {
+				      'type': 'leave-document',
+				      'clientId': this.socket.clientId
+				    };
+				    this.socket.send(msg);
+				}
 			}
-
-			this.destroyCollabAnnotations();
 		},
 
 		currentDoc: function() {
 			if (location.hash.indexOf('/sharedWorkspace') === 1) {
 		        //get everything after 'workspace name'
-		        //TODO make this real
-		        var workspace = 'mo/mourad/OrionContent/';
-		        var index = location.hash.indexOf(workspace);
-		        return location.hash.substring(index + workspace.length, location.hash.length);
+		        var workspace = '/sharedWorkspace/tree/file/';
+		        return location.hash.substring(location.hash.indexOf(workspace) + workspace.length).split('/').slice(3).join('/');
 			} else {
 		        var loc = '/file/';
 		        var index = location.hash.indexOf(loc);
@@ -194,38 +195,42 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 			ruler = this.editor._overviewRuler;
 			ruler.addAnnotationType(AT.ANNOTATION_COLLAB_LINE_CHANGED, 1);
 			this.textView = this.editor.getTextView();
-			this.textView.addEventListener('Selection', function(e) {
-				var currLine = self.editor.getLineAtOffset(e.newValue.start);
-				var lastLine = self.editor.getModel().getLineCount()-1;
-				var lineStartOffset = self.editor.getLineStart(currLine);
-				var offset = e.newValue.start;
 
-			    if (offset) {
-			        //decide whether or not it is worth sending (if line has changed or needs updating).
-			        if (currLine !== self.myLine || currLine === lastLine || currLine === 0) {
-			        //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
-			            if (currLine === lastLine && offset === lineStartOffset) {
-			                currLine -= 1;
-			            }
-			        } else {
-			            return;
-			        }
-				}
-
-			    self.myLine = currLine;
-
-			    self.socket.sendSelection(currLine);
-
-			    //update yourself for self-tracking
-			    self.updateLineAnnotation(self.socket.clientId, self.myLine);
-			});
 			//hook the collab annotation
 			if (this.socket && !this.socket.closed) {
 				this.initSocket();
 			}
 		},
 
+		selectionListener: function(e) {
+			if (!this.socket) return;
+			var currLine = this.editor.getLineAtOffset(e.newValue.start);
+			var lastLine = this.editor.getModel().getLineCount()-1;
+			var lineStartOffset = this.editor.getLineStart(currLine);
+			var offset = e.newValue.start;
+
+		    if (offset) {
+		        //decide whether or not it is worth sending (if line has changed or needs updating).
+		        if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
+		        //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
+		            if (currLine === lastLine && offset === lineStartOffset) {
+		                currLine -= 1;
+		            }
+		        } else {
+		            return;
+		        }
+			}
+
+		    this.myLine = currLine;
+
+		    this.socket.sendSelection(currLine);
+
+		    //update yourself for self-tracking
+		    this.updateLineAnnotation(this.socket.clientId, this.myLine);
+		},
+
 		viewUninstalled: function(event) {
+			this.textView.removeEventListener('Selection', self.selectionListener);
 			this.textView = null;
 			this.docPeers = {};
 			this.myLine = 0;
@@ -310,6 +315,13 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 
 		socketDisconnected: function() {
 			this.socket = null;
+			this.inputManager.collabRunning = false;
+			var self = this;
+			if (this.textView) {
+				this.textView.removeEventListener('Selection', self.selectionListener.bind(self));
+			}
+			this.destroyCollabAnnotations();
+			this.destroyOT();
 		},
 
 		getDocPeers: function() {
