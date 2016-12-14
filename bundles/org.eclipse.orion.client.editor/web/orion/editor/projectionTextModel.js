@@ -462,7 +462,8 @@ define("orion/editor/projectionTextModel", ['orion/editor/textModel', 'orion/edi
 				removedCharCount: change.removedCharCount,
 				addedCharCount: change.addedCharCount,
 				removedLineCount: change.removedLineCount,
-				addedLineCount: change.addedLineCount
+				addedLineCount: change.addedLineCount,
+				text: change.text
 			};
 			this.onChanged(modelChangedEvent1);
 			this._change = undefined;

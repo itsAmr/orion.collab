@@ -1919,7 +1919,7 @@ ot.OrionAdapter = (function (global) {
     bind(this, 'onBlur');
 
     this.cm.addEventListener('changes', this.onChanges);
-    this.cm.addEventListener('ModelChanging', this.onChange);
+    this.cm.addEventListener('ModelChanged', this.onChange);
     this.cm.addEventListener('cursorActivity', this.onCursorActivity);
     this.cm.addEventListener('focus', this.onFocus);
     this.cm.addEventListener('blur', this.onBlur);
@@ -1928,7 +1928,7 @@ ot.OrionAdapter = (function (global) {
   // Removes all event listeners from the Orion instance.
   OrionAdapter.prototype.detach = function () {
     this.cm.removeEventListener('changes', this.onChanges);
-    this.cm.removeEventListener('ModelChanging', this.onChange);
+    this.cm.removeEventListener('ModelChanged', this.onChange);
     this.cm.removeEventListener('cursorActivity', this.onCursorActivity);
     this.cm.removeEventListener('focus', this.onFocus);
     this.cm.removeEventListener('blur', this.onBlur);
@@ -1967,7 +1967,7 @@ ot.OrionAdapter = (function (global) {
     // A disadvantage of this approach is its complexity `O(n^2)` in the length
     // of the linked list of changes.
 
-    var docEndLength = OrionDocLength(doc);
+    var docEndLength = OrionDocLength(doc) - changes[0].addedCharCount + changes[0].removedCharCount;
     var operation    = new TextOperation().retain(docEndLength);
     var inverse      = new TextOperation().retain(docEndLength);
 

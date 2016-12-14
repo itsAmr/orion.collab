@@ -30,6 +30,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		this.inputManager = inputManager;
 		this.textView = null;
 		var self = this;
+		this.selectionListener = this.selectionListener.bind(this);
 		mEventTarget.EventTarget.addMixin(collabSocket);
 		this.editor.addEventListener("ModelLoaded", function(event) {self.viewInstalled.call(self, event);});
 		this.editor.addEventListener("TextViewUninstalled", function(event) {self.viewUninstalled.call(self, event);});
@@ -53,7 +54,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		initSocket: function() {
 			this.inputManager.collabRunning = true;
 			var self = this;
-			this.textView.addEventListener('Selection', self.selectionListener.bind(self));
+			this.textView.addEventListener('Selection', self.selectionListener);
 			
 			//Add the necessary functions to the socket so we can run an OT session.
 		  	this.socket.sendOperation = function (revision, operation, selection) {
@@ -230,7 +231,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		},
 
 		viewUninstalled: function(event) {
-			this.textView.removeEventListener('Selection', self.selectionListener);
+			this.textView.removeEventListener('Selection', this.selectionListener);
 			this.textView = null;
 			this.docPeers = {};
 			this.myLine = 0;
@@ -316,9 +317,8 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		socketDisconnected: function() {
 			this.socket = null;
 			this.inputManager.collabRunning = false;
-			var self = this;
 			if (this.textView) {
-				this.textView.removeEventListener('Selection', self.selectionListener.bind(self));
+				this.textView.removeEventListener('Selection', this.selectionListener);
 			}
 			this.destroyCollabAnnotations();
 			this.destroyOT();
