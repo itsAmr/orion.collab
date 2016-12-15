@@ -68,6 +68,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 			      'clientId': this.clientId
 			    };
 			    this.send(JSON.stringify(msg));
+				self.editor.markClean();
 		  	};
 
 		 	this.socket.sendSelection = function (selection) {
@@ -129,6 +130,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		            break;
 		          case "operation":
 		            this.trigger('operation', msg.operation);
+					self.editor.markClean();
 		            // this.trigger('selection', msg.clientId, msg.selection);
 		            break;
 		          case "selection":
@@ -160,6 +162,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 			this.otOrionAdapter = new ot.OrionAdapter(this.textView);
 			this.ot = new ot.EditorClient(revision, clients, this.socket, this.otOrionAdapter);
 			this.initializeLineAnnotations();
+			this.editor.markClean();
 		},
 
 		destroyOT: function() {
@@ -319,8 +322,8 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 			this.inputManager.collabRunning = false;
 			if (this.textView) {
 				this.textView.removeEventListener('Selection', this.selectionListener);
+				this.destroyCollabAnnotations();
 			}
-			this.destroyCollabAnnotations();
 			this.destroyOT();
 		},
 

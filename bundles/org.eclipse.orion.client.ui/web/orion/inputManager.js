@@ -382,7 +382,7 @@ define([
 				return deferred;
 			}
 			var editor = this.getEditor();
-			if (!editor || !editor.isDirty() || this.getReadOnly()) { return done(); }
+			if (this.collabRunning || !editor || !editor.isDirty() || this.getReadOnly()) { return done(); }
 			var failedSaving = this._errorSaving;
 			var input = this.getInput();
 			this.reportStatus(messages['Saving...']);
