@@ -201,9 +201,9 @@ channels.WebSocketChannel = util.Class(AbstractChannel, {
       this._reopening = false;
     }).bind(this);
     this.socket.onclose = (function (event) {
-    window.require(['orion/collab/collabClient'], function(collabClient) {
-      collabClient.collabSocket.destroySocket();
-    });
+      window.require(['orion/collab/collabClient'], function(collabClient) {
+        collabClient.collabSocket.destroySocket();
+      });
       this.socket = null;
       var method = "error";
       if (event.wasClean) {

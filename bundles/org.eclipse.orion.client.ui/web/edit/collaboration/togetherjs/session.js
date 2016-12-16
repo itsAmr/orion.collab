@@ -135,6 +135,10 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
         window.require(['orion/collab/collabClient'], function(collabClient) {
           collabClient.collabSocket.setSocket(c);
         });
+      } else if (msg.type == 'file_operation') {
+        this.opmessage(msg);
+        console.info("In:", msg)
+        return;
       }
       // if (! readyForMessages) {
       //   if (DEBUG) {
@@ -259,7 +263,8 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
   session.hub.on("init-connection", function (msg) {
     var msg = {
       'type': 'authenticate',
-      'token': localStorage.getItem('orionSocket.authToken')
+      'token': localStorage.getItem('orionSocket.authToken'),
+      'clientId': session.clientId
     };
     session.send(msg);
   });

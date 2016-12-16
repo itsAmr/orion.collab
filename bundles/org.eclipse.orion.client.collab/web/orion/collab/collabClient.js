@@ -25,11 +25,13 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 	* As soon as the collabSocket.socket value gets set or unset, a collabClient needs to be notified.
 	* So when creating a collabClient, need to have a listener on changes to collabSocket.socket
 	*/
-	function CollabClient(editor, inputManager) {
+	function CollabClient(editor, inputManager, fileClient) {
 		this.editor = editor;
 		this.inputManager = inputManager;
+		this.fileClient = fileClient;
 		this.textView = null;
 		var self = this;
+		this.fileClient.addEventListener('Changed', self.sendFileOperation.bind(self));
 		this.selectionListener = this.selectionListener.bind(this);
 		mEventTarget.EventTarget.addMixin(collabSocket);
 		this.editor.addEventListener("ModelLoaded", function(event) {self.viewInstalled.call(self, event);});
@@ -180,15 +182,17 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		},
 
 		currentDoc: function() {
-			if (location.hash.indexOf('/sharedWorkspace') === 1) {
+			var workspace = this.getFileSystemPrefix();
+			if (workspace !== '/file/') {
 		        //get everything after 'workspace name'
-		        var workspace = '/sharedWorkspace/tree/file/';
 		        return location.hash.substring(location.hash.indexOf(workspace) + workspace.length).split('/').slice(3).join('/');
 			} else {
-		        var loc = '/file/';
-		        var index = location.hash.indexOf(loc);
-		        return location.hash.substring(index + loc.length, location.hash.length);
+		        return location.hash.substring(location.hash.indexOf(workspace) + workspace.length, location.hash.length);
 			}
+		},
+
+		getFileSystemPrefix: function() {
+			return location.hash.indexOf('/sharedWorkspace') === 1 ? '/sharedWorkspace/tree/file/' : '/file/';
 		},
 
 		viewInstalled: function(event) {
@@ -312,6 +316,16 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 
 		socketConnected: function() {
 			this.socket = this.collabSocket.socket;
+			var self = this;
+			this.socket.opmessage = function(msg) {
+				/**
+				** this was supposed to be doc level messages, but we are now adding session level operations like file_operation.
+				** so for now we will temporarily allow it through the following way until the togetherjs session management is replaced.
+				*/
+				if (msg.type == 'file_operation') {
+					self.handleFileOperation(msg);
+				}
+			};
 			if (this.textView) {
 				this.initSocket();
 			}
@@ -324,6 +338,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 				this.textView.removeEventListener('Selection', this.selectionListener);
 				this.destroyCollabAnnotations();
 			}
+			this.fileClient.removeEventListener('Changed', this._sendFileOperation);
 			this.destroyOT();
 		},
 
@@ -334,6 +349,108 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		      'clientId': this.socket.clientId
 		    };
 		    this.socket.send(msg);
+		},
+
+		sendFileOperation: function(evt) {
+			if (!this.socket) return;
+			if (!this.ignoreNextFileOperation) {
+				var operation = evt.created ? 'created' : evt.moved ? 'moved' : evt.deleted ? 'deleted' : evt.copied ? 'copied' : '';
+				if (operation) {
+				    var msg = {
+						'type': 'file_operation',
+						'operation': operation,
+						'data': evt[operation],
+						'clientId': this.socket.clientId
+				    };
+				    this.socket.send(msg);
+				}
+			}
+			this.ignoreNextFileOperation = false;
+		},
+
+		handleFileOperation: function(msg) {
+			if (!this.ignoreNextFileOperation) {
+				var evt = this.makeFileClientEvent(msg.operation, msg.data);
+				this.dispatchFileClientEvent(evt);
+			}
+			this.ignoreNextFileOperation = false;
+		},
+
+		makeFileClientEvent: function(operation, data) {
+			/**
+			** we can't trigger the event directly since the user might be on a seperate file system.
+			*/
+			data = data[0];
+			var evt = {
+				type: "Changed"
+			};
+
+			var evtData = {'select': false};
+
+			switch (operation) {
+				case 'created':
+					var parentLocation = this.maybeTransformLocation(data.parent);
+					var result = data.result;
+					result.Parents = []; //is parents even needed for this operation?
+					result.Location = this.maybeTransformLocation(result.Location);
+					evt.created = [{'parent': parentLocation, 'result': result, 'eventData': evtData}];
+					break;
+				case 'deleted':
+					var deleteLocation = this.maybeTransformLocation(data.deleteLocation);
+					evt.deleted = [{'deleteLocation': deleteLocation, 'eventData': evtData}];
+					break;
+				case 'moved':
+					var sourceLocation = this.maybeTransformLocation(data.source);
+					var targetLocation = this.maybeTransformLocation(data.target);
+					var result = data.result;
+					result.Parents = []; //is parents even needed for this operation?
+					result.Location = this.maybeTransformLocation(result.Location);
+					evt.moved = [{'source': sourceLocation, 'target': targetLocation, 'result': result, 'eventData': evtData}];
+					break;
+				case 'copied':
+					var sourceLocation = this.maybeTransformLocation(data.source);
+					var targetLocation = this.maybeTransformLocation(data.target);
+					var result = data.result;
+					result.Parents = []; //is parents even needed for this operation?
+					result.Location = this.maybeTransformLocation(result.Location);
+					evt.copied = [{'source': sourceLocation, 'target': targetLocation, 'result': result, 'eventData': evtData}];
+					break;
+			}
+
+			return evt;
+		},
+
+		/**
+		** For example we potentially need to convert a '/file/web/potato.js' to '/sharedWorkspace/tree/file/web/potato.js'
+		** and vice-versa, depending on our file system and the sender's filesystem.
+		**/
+		maybeTransformLocation: function(Location) {
+			var loc = this.getFileSystemPrefix();
+			//if in same workspace
+			if (Location.indexOf(loc) === 0) {
+				return Location;
+			} else {
+				var oppositeLoc = loc == '/file/' ? '/sharedWorkspace/tree/file/' : '/file/';
+				//we need to replace sharedWorkspace... with /file and vice versa.
+				// we also need to replace workspace info for shared workspace or add it when its not the case.
+				var file = Location.substring(oppositeLoc.length);
+				if (loc == '/file/') {
+					//since the received location includes workspace info, swap that out.
+					file = file.split('/').slice(3).join('/');
+				} else {
+					//since you need to workspace info, add that in.
+					var projectLoc = location.hash.substring(location.hash.indexOf(loc) + loc.length);
+					projectLoc = projectLoc.split('/').slice(0,3).join('/') + '/';
+					file = projectLoc + file;
+				}
+				Location = loc + file;
+				return Location;
+			}
+		},
+
+		dispatchFileClientEvent: function(evt) {
+			this.ignoreNextFileOperation = true;
+			this.fileClient.dispatchEvent(evt);
 		}
 	};
 
