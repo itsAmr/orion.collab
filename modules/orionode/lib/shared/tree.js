@@ -23,12 +23,15 @@ module.exports = {};
 
 module.exports.router = function(options) {
 	var workspaceRoot = options.options.workspaceDir;
+	var sharedRoot = options.root;
 	if (!workspaceRoot) { throw new Error('options.options.workspaceDir required'); }
 
 	return express.Router()
 	.get('/', getSharedWorkspace)
 	.get('/file*', ensureAccess, getTree)
 	.put('/file*', ensureAccess, putFile)
+	.post('/file*', ensureAccess, postFile)
+	.delete('/file*', ensureAccess, deleteFile)
 	.get('/load*', loadFile)
 	.put('/save*', saveFile);
 
@@ -169,6 +172,55 @@ module.exports.router = function(options) {
 			}
 			else {
 				write();
+			}
+		});
+	}
+
+	/**
+	 * For file create/move/copy.
+	 */
+	function postFile(req, res) {
+		var rest = req.params["0"].substring(1);
+		var diffPatch = req.headers['x-http-method-override'];
+		if (diffPatch === "PATCH") {
+			handleDiff(req, res, rest, req.body);
+			return;
+		}
+		var name = fileUtil.decodeSlug(req.headers.slug) || req.body && req.body.Name;
+		if (!name) {
+			writeError(400, res, new Error('Missing Slug header or Name property'));
+			return;
+		}
+
+		req.user.workspaceDir = workspaceRoot;
+		var filepath = path.join(workspaceRoot, rest, name);
+		fileUtil.handleFilePOST(sharedRoot, req, res, filepath);
+	}
+
+	/**
+	 * For file delete.
+	 */
+	function deleteFile(req, res) {
+		var rest = req.params["0"].substring(1);
+		var filepath = path.join(workspaceRoot, rest);
+		fileUtil.withStatsAndETag(filepath, function(error, stats, etag) {
+			var ifMatchHeader = req.headers['if-match'];
+			if (error && error.code === 'ENOENT') {
+				return res.sendStatus(204);
+			} else if (ifMatchHeader && ifMatchHeader !== etag) {
+				return res.sendStatus(412);
+			}
+			var callback = function(error) {
+				if (error) {
+					writeError(500, res, error);
+					return;
+				}
+				res.sendStatus(204);
+			};
+			if (stats.isDirectory()) {
+				fileUtil.rumRuff(filepath, callback);
+			} else {
+				fs.unlink(filepath, callback);
 			}
 		});
 	}

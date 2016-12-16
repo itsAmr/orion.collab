@@ -11,7 +11,7 @@
 
 /*eslint-env browser, amd*/
 /*global URL*/
-define(["orion/xhr", "orion/Deferred", "orion/encoding-shim", "orion/URL-shim"], function(xhr, Deferred) {
+define(["orion/xhr", "orion/Deferred", "orion/URL-shim",  "orion/form"], function(xhr, Deferred, _, form) {
 
 	function CollabFileImpl(fileBase) {
 		this.fileBase = fileBase;
@@ -64,19 +64,84 @@ define(["orion/xhr", "orion/Deferred", "orion/encoding-shim", "orion/URL-shim"],
 			throw new Error("Not supported"); //$NON-NLS-0$ 
 		},
 		createFolder: function(parentLocation, folderName) {
-			throw new Error("Not supported"); //$NON-NLS-0$ 
+			console.log(parentLocation);
+			console.log(folderName);
+			return xhr("POST", parentLocation, {
+				headers: {
+					"Orion-Version": "1",
+					"X-Create-Options" : "no-overwrite",
+					"Slug": form.encodeSlug(folderName),
+					"Content-Type": "application/json;charset=UTF-8"
+				},
+				data: JSON.stringify({
+					"Name": folderName,
+					"LocalTimeStamp": "0",
+					"Directory": true
+				}),
+				timeout: 15000
+			}).then(function(result) {
+				return result.response ? JSON.parse(result.response) : null;
+			});
 		},
 		createFile: function(parentLocation, fileName) {
-			throw new Error("Not supported"); //$NON-NLS-0$ 
+			return xhr("POST", parentLocation, {
+				headers: {
+					"Orion-Version": "1",
+					"X-Create-Options" : "no-overwrite",
+					"Slug": form.encodeSlug(fileName),
+					"Content-Type": "application/json;charset=UTF-8"
+				},
+				data: JSON.stringify({
+					"Name": fileName,
+					"LocalTimeStamp": "0",
+					"Directory": false
+				}),
+				timeout: 15000
+			}).then(function(result) {
+				return result.response ? JSON.parse(result.response) : null;
+			});
 		},
 		deleteFile: function(location) {
-			throw new Error("Not supported"); //$NON-NLS-0$ 
+			return xhr("DELETE", location, {
+				headers: {
+					"Orion-Version": "1"
+				},
+				timeout: 15000
+			}).then(function(result) {
+				return result.response ? JSON.parse(result.response) : null;
+			});
 		},
 		moveFile: function(sourceLocation, targetLocation, name) {
-			throw new Error("Not supported"); //$NON-NLS-0$ 
+			return this._doCopyMove(sourceLocation, targetLocation, true, name).then(function(result) {
+				return result;
+			});
 		},
 		copyFile: function(sourceLocation, targetLocation, name) {
-			throw new Error("Not supported"); //$NON-NLS-0$ 
+			return this._doCopyMove(sourceLocation, targetLocation, false, name).then(function(result) {
+				return result;
+			});
+		},
+		_doCopyMove: function(sourceLocation, targetLocation, isMove, _name) {
+			if (!_name) {
+				//take the last segment (trailing slash will product an empty segment)
+				var segments = sourceLocation.split("/");
+				_name = segments.pop() || segments.pop();
+			}
+			return xhr("POST", targetLocation, {
+				headers: {
+					"Orion-Version": "1",
+					"Slug": form.encodeSlug(_name),
+					"X-Create-Options": "no-overwrite," + (isMove ? "move" : "copy"),
+					"Content-Type": "application/json;charset=UTF-8"
+				},
+				data: JSON.stringify({
+					"Location": sourceLocation,
+					"Name": _name
+				}),
+				timeout: 15000
+			}).then(function(result) {
+				return result.response ? JSON.parse(result.response) : null;
+			});
 		},
 		read: function(location, isMetadata) {
 			var url = new URL(location, window.location);
