@@ -79,7 +79,7 @@ module.exports = function(options) {
             Length: length,
             Location: location ? "/sharedWorkspace/tree/file" + location : "/sharedWorkspace/tree",
             ChildrenLocation: dir ? (location ? "/sharedWorkspace/tree/file" + location + "?depth=1": "/sharedWorkspace/tree" + "?depth=1") : undefined,
-            // Parents: fileUtil.getParents('/sharedWorkspace/tree/file/', location),
+            Parents: fileUtil.getParents('/sharedWorkspace/tree/file' + location.split('/').splice(0, 4).join('/'), location.split('/').splice(4).join('/')),
             Attributes: {
                 ReadOnly: false
             }

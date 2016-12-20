@@ -83,8 +83,11 @@ module.exports.router = function(options) {
 		var filePath = path.join(workspaceRoot, req.params["0"]);
 		var fileRoot = req.params["0"];
 		fileUtil.withStatsAndETag(filePath, function(err, stats, etag) {
-			if (err) throw err;
-			if (stats.isDirectory()) {
+			if (err && err.code === 'ENOENT') {
+				writeError(404, res, 'File not found: ' + filePath);
+			} else if (err) {
+				writeError(500, res, err);
+			} else if (stats.isDirectory()) {
 				sharedUtil.getChildren(fileRoot, filePath, req.query.depth ? req.query.depth: 1)
 				.then(function(children) {
 					// TODO this is basically a File object with 1 more field. Should unify the JSON between workspace.js and file.js
@@ -93,13 +96,8 @@ module.exports.router = function(options) {
 					});
 					location = fileRoot;
 					var name = path.win32.basename(filePath);
-					tree = {
-						Name: name,
-						Location: "/sharedWorkspace/tree/file" + location,
-						ChildrenLocation: "/sharedWorkspace/tree/file" + location + "?depth=1",
-						Children: children,
-						Directory: true
-					};
+					tree = sharedUtil.treeJSON(name, location, 0, true, 0, false);
+					tree["Children"] = children;
 				})
 				.then(function() {
 					return sharedProjects.getHubID(filePath);
@@ -117,7 +115,6 @@ module.exports.router = function(options) {
 					var name = path.win32.basename(filePath);
 					var result = sharedUtil.treeJSON(name, fileRoot, 0, false, 0, false);
 					result.ETag = etag;
-					// createParents(result);
 					sharedProjects.getHubID(filePath)
 					.then(function(hub){
 						if (hub) {
@@ -204,12 +201,6 @@ module.exports.router = function(options) {
 		var rest = req.params["0"].substring(1);
 		var filepath = path.join(workspaceRoot, rest);
 		fileUtil.withStatsAndETag(filepath, function(error, stats, etag) {
-			var ifMatchHeader = req.headers['if-match'];
-			if (error && error.code === 'ENOENT') {
-				return res.sendStatus(204);
-			} else if (ifMatchHeader && ifMatchHeader !== etag) {
-				return res.sendStatus(412);
-			}
 			var callback = function(error) {
 				if (error) {
 					writeError(500, res, error);
@@ -217,7 +208,14 @@ module.exports.router = function(options) {
 				}
 				res.sendStatus(204);
 			};
-			if (stats.isDirectory()) {
+			var ifMatchHeader = req.headers['if-match'];
+			if (error && error.code === 'ENOENT') {
+				return res.sendStatus(204);
+			} else if (error) {
+				writeError(500, res, error);
+			} else if (ifMatchHeader && ifMatchHeader !== etag) {
+				return res.sendStatus(412);
+			} else if (stats.isDirectory()) {
 				fileUtil.rumRuff(filepath, callback);
 			} else {
 				fs.unlink(filepath, callback);

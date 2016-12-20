@@ -625,8 +625,7 @@ define("orion/editor/textModel", ['orion/editor/eventTarget', 'orion/regex', 'or
 				removedCharCount: removedCharCount,
 				addedCharCount: addedCharCount,
 				removedLineCount: removedLineCount,
-				addedLineCount: addedLineCount,
-				text: text
+				addedLineCount: addedLineCount
 			};
 			this.onChanged(modelChangedEvent);
 		}
