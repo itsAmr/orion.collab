@@ -2098,7 +2098,7 @@ ot.OrionAdapter = (function (global) {
     }
     // if (this.selectionChanged) { this.trigger('selectionChange'); }
     this.changeInProgress = false;
-    this.ignoreNextChange = false;
+    // this.ignoreNextChange = false;
   };
 
   function init(update, msg) {
@@ -2225,6 +2225,7 @@ ot.OrionAdapter = (function (global) {
   OrionAdapter.prototype.applyOperation = function (operation) {
     this.ignoreNextChange = true;
     OrionAdapter.applyOperationToOrion(operation, this.model);
+    this.ignoreNextChange = false;
   };
 
   OrionAdapter.prototype.registerUndo = function (undoFn) {
