@@ -170,6 +170,8 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		destroyOT: function() {
 			if (this.ot && this.otOrionAdapter) {
 				this.otOrionAdapter.detach();
+				//reset to regular undo/redo behaviour
+				this.editor.getTextActions().init();
 				this.ot = null;
 				if (this.socket) {
 					var msg = {

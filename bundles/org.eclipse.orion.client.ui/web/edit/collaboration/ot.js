@@ -1580,8 +1580,10 @@ ot.EditorClient = (function () {
 
   SelfMeta.prototype.transform = function (operation) {
     return new SelfMeta(
-      this.selectionBefore.transform(operation),
-      this.selectionAfter.transform(operation)
+      // this.selectionBefore.transform(operation),
+      // this.selectionAfter.transform(operation)
+      undefined,
+      undefined
     );
   };
 
@@ -1646,13 +1648,13 @@ ot.EditorClient = (function () {
   };
 
   OtherClient.prototype.updateSelection = function (selection) {
-    this.removeSelection();
-    this.selection = selection;
-    this.mark = this.editorAdapter.setOtherSelection(
-      selection,
-      selection.position === selection.selectionEnd ? this.color : this.lightColor,
-      this.id
-    );
+    // this.removeSelection();
+    // this.selection = selection;
+    // this.mark = this.editorAdapter.setOtherSelection(
+    //   selection,
+    //   selection.position === selection.selectionEnd ? this.color : this.lightColor,
+    //   this.id
+    // );
   };
 
   OtherClient.prototype.remove = function () {
@@ -1808,15 +1810,15 @@ ot.EditorClient = (function () {
     var meta = new SelfMeta(selectionBefore, this.selection);
     var operation = new WrappedOperation(textOperation, meta);
 
-    // var compose = this.undoManager.undoStack.length > 0 &&
-    //   inverse.shouldBeComposedWithInverted(last(this.undoManager.undoStack).wrapped);
+    var compose = this.undoManager.undoStack.length > 0 &&
+      inverse.shouldBeComposedWithInverted(last(this.undoManager.undoStack).wrapped);
     var inverseMeta = new SelfMeta(this.selection, selectionBefore);
-    // this.undoManager.add(new WrappedOperation(inverse, inverseMeta), compose);
+    this.undoManager.add(new WrappedOperation(inverse, inverseMeta), compose);
     this.applyClient(textOperation);
   };
 
   EditorClient.prototype.updateSelection = function () {
-    this.selection = this.editorAdapter.getSelection();
+    // this.selection = this.editorAdapter.getSelection();
   };
 
   EditorClient.prototype.onSelectionChange = function () {
@@ -1906,46 +1908,34 @@ ot.OrionAdapter = (function (global) {
   var Selection = ot.Selection;
 
   function OrionAdapter (orion) {
-    this.cm = orion;
+    this.orion = orion;
     this.model = orion.getModel();
     this.ignoreNextChange = false;
     this.changeInProgress = false;
     this.selectionChanged = false;
+    this.deleteContent = "";
 
-    bind(this, 'onChanges');
-    bind(this, 'onChange');
+    bind(this, 'onChanging');
+    bind(this, 'onChanged');
     bind(this, 'onCursorActivity');
     bind(this, 'onFocus');
     bind(this, 'onBlur');
 
-    this.cm.addEventListener('changes', this.onChanges);
-    this.cm.addEventListener('ModelChanged', this.onChange);
-    this.cm.addEventListener('cursorActivity', this.onCursorActivity);
-    this.cm.addEventListener('focus', this.onFocus);
-    this.cm.addEventListener('blur', this.onBlur);
+    this.orion.addEventListener('ModelChanging', this.onChanging);
+    this.orion.addEventListener('ModelChanged', this.onChanged);
+    this.orion.addEventListener('cursorActivity', this.onCursorActivity);
+    this.orion.addEventListener('focus', this.onFocus);
+    this.orion.addEventListener('blur', this.onBlur);
   }
 
   // Removes all event listeners from the Orion instance.
   OrionAdapter.prototype.detach = function () {
-    this.cm.removeEventListener('changes', this.onChanges);
-    this.cm.removeEventListener('ModelChanged', this.onChange);
-    this.cm.removeEventListener('cursorActivity', this.onCursorActivity);
-    this.cm.removeEventListener('focus', this.onFocus);
-    this.cm.removeEventListener('blur', this.onBlur);
+    this.orion.removeEventListener('ModelChanging', this.onChanging);
+    this.orion.removeEventListener('ModelChanged', this.onChanged);
+    this.orion.removeEventListener('cursorActivity', this.onCursorActivity);
+    this.orion.removeEventListener('focus', this.onFocus);
+    this.orion.removeEventListener('blur', this.onBlur);
   };
-
-  function cmpPos (a, b) {
-    if (a.line < b.line) { return -1; }
-    if (a.line > b.line) { return 1; }
-    if (a.ch < b.ch)     { return -1; }
-    if (a.ch > b.ch)     { return 1; }
-    return 0;
-  }
-  function posEq (a, b) { return cmpPos(a, b) === 0; }
-  function posLe (a, b) { return cmpPos(a, b) <= 0; }
-
-  function minPos (a, b) { return posLe(a, b) ? a : b; }
-  function maxPos (a, b) { return posLe(a, b) ? b : a; }
 
   function OrionDocLength (doc) {
     return doc.getModel().getCharCount();
@@ -1955,7 +1945,7 @@ ot.OrionAdapter = (function (global) {
   // in Orion v4) or single change or linked list of changes (as returned
   // by the 'change' event in Orion prior to version 4) into a
   // TextOperation and its inverse and returns them as a two-element array.
-  OrionAdapter.operationFromOrionChanges = function (changes, doc) {
+  OrionAdapter.operationFromOrionChanges = function (changes, doc, deletedText) {
     // Approach: Replay the changes, beginning with the most recent one, and
     // construct the operation and its inverse. We have to convert the position
     // in the pre-change coordinate system to an index. We have a method to
@@ -1971,54 +1961,11 @@ ot.OrionAdapter = (function (global) {
     var operation    = new TextOperation().retain(docEndLength);
     var inverse      = new TextOperation().retain(docEndLength);
 
-    var indexFromPos = function (pos) {
-      return doc.indexFromPos(pos);
-    };
-
-    function last (arr) { return arr[arr.length - 1]; }
-
-    function sumLengths (strArr) {
-      if (strArr.length === 0) { return 0; }
-      var sum = 0;
-      for (var i = 0; i < strArr.length; i++) { sum += strArr[i].length; }
-      return sum + strArr.length - 1;
-    }
-
-    function updateIndexFromPos (indexFromPos, change) {
-      return function (pos) {
-        if (posLe(pos, change.from)) { return indexFromPos(pos); }
-        if (posLe(change.to, pos)) {
-          return indexFromPos({
-            line: pos.line + change.text.length - 1 - (change.to.line - change.from.line),
-            ch: (change.to.line < pos.line) ?
-              pos.ch :
-              (change.text.length <= 1) ?
-                pos.ch - (change.to.ch - change.from.ch) + sumLengths(change.text) :
-                pos.ch - change.to.ch + last(change.text).length
-          }) + sumLengths(change.removed) - sumLengths(change.text);
-        }
-        if (change.from.line === pos.line) {
-          return indexFromPos(change.from) + pos.ch - change.from.ch;
-        }
-        return indexFromPos(change.from) +
-          sumLengths(change.removed.slice(0, pos.line - change.from.line)) +
-          1 + pos.ch;
-      };
-    }
-
     for (var i = changes.length - 1; i >= 0; i--) {
       var change = changes[i];
 
       var fromIndex = change.start;
       var restLength = docEndLength - fromIndex - change.removedCharCount;
-      var action;
-      if (change.addedCharCount && change.removedCharCount) {
-        action = 'replace';
-      } else if (change.addedCharCount) {
-        action = 'insert';
-      } else {
-        action = 'delete';
-      }
 
       operation = operation.compose(new TextOperation()
         .retain(fromIndex)
@@ -2027,25 +1974,29 @@ ot.OrionAdapter = (function (global) {
         .retain(restLength)
         );
 
-      inverse = new TextOperation();
-      // inverse = new TextOperation()
-      //   .retain(fromIndex)
-      //   ['delete'](change.text)
-      //   .retain(restLength)
-      //   .compose(inverse);
-
-      // inverse = inverse.compose(new TextOperation()
-      //   .retain(fromIndex)
-      //   ['delete'](change.text)
-      //   .insert(change.removed.join('\n'))
-      //   .retain(restLength)
-      // );
-
-      // if (action == 'delete') {
-      //   var _ref = [operation, inverse];
-      //   operation = _ref[1];
-      //   inverse = _ref[0];
-      // }
+      if (change.addedCharCount && change.removedCharCount) {
+        //REPLACE ACTION
+        inverse = new TextOperation()
+          .retain(fromIndex)
+          ['delete'](change.addedCharCount)
+          .insert(deletedText)
+          .retain(restLength)
+          .compose(inverse);
+      } else if (change.addedCharCount) {
+        //INSERT ACTION
+        inverse = new TextOperation()
+          .retain(fromIndex)
+          ['delete'](change.addedCharCount)
+          .retain(restLength)
+          .compose(inverse);
+      } else {
+        //DELETE ACTION
+        inverse = new TextOperation()
+          .retain(fromIndex)
+          .insert(deletedText)
+          .retain(restLength)
+          .compose(inverse);
+      }
 
       docEndLength += change.removedCharCount - change.text.length;
     }
@@ -2058,7 +2009,7 @@ ot.OrionAdapter = (function (global) {
     OrionAdapter.operationFromOrionChanges;
 
   // Apply an operation to a Orion instance.
-  OrionAdapter.applyOperationToOrion = function (operation, cm) {
+  OrionAdapter.applyOperationToOrion = function (operation, orion) {
       var ops = operation.ops;
       var index = 0; // holds the current index into Orion's content
       for (var i = 0, l = ops.length; i < l; i++) {
@@ -2066,12 +2017,12 @@ ot.OrionAdapter = (function (global) {
         if (TextOperation.isRetain(op)) {
           index += op;
         } else if (TextOperation.isInsert(op)) {
-          cm.setText(op, index, i < (ops.length - 1) ? index : undefined);
+          orion.setText(op, index, i < (ops.length - 1) ? index : undefined);
           index += op.length;
         } else if (TextOperation.isDelete(op)) {
           var from = index;
           var to   = index - op;
-          cm.setText('', from, to);
+          orion.setText('', from, to);
         }
       }
   };
@@ -2080,22 +2031,25 @@ ot.OrionAdapter = (function (global) {
     this.callbacks = cb;
   };
 
-  OrionAdapter.prototype.onChanges = function () {
+  OrionAdapter.prototype.onChanging = function (change) {
     // By default, Orion's event order is the following:
-    // 1. 'change', 2. 'cursorActivity', 3. 'changes'.
-    // We want to fire the 'selectionChange' event after the 'change' event,
-    // but need the information from the 'changes' event. Therefore, we detect
-    // when a change is in progress by listening to the change event, setting
-    // a flag that makes this adapter defer all 'cursorActivity' events.
+    // 1. 'ModelChanging', 2. 'ModelChanged'
+    // We want to fire save the deleted/replaced text during a 'modelChanging' event if applicable,
+    // so that we can use it to create the reverse operation used for the undo-stack after the model has changed.
+    if (change.removedCharCount > 0) {
+      this.deleteContent = this.orion.getText(change.start, change.start + change.removedCharCount);
+    }
+
     this.changeInProgress = true;
   };
 
-  OrionAdapter.prototype.onChange = function (change) {
+  OrionAdapter.prototype.onChanged = function (change) {
     this.changeInProgress = true;
     if (!this.ignoreNextChange) {
-      var pair = OrionAdapter.operationFromOrionChanges([change], this.cm);
+      var pair = OrionAdapter.operationFromOrionChanges([change], this.orion, this.deleteContent);
       this.trigger('change', pair[0], pair[1]);
     }
+    this.deleteContent = "";
     // if (this.selectionChanged) { this.trigger('selectionChange'); }
     this.changeInProgress = false;
     // this.ignoreNextChange = false;
@@ -2116,22 +2070,22 @@ ot.OrionAdapter = (function (global) {
   };
 
   OrionAdapter.prototype.onBlur = function () {
-    if (!this.cm.somethingSelected()) { this.trigger('blur'); }
+    if (!this.orion.somethingSelected()) { this.trigger('blur'); }
   };
 
   OrionAdapter.prototype.getValue = function () {
-    return this.cm.getText();
+    return this.orion.getText();
   };
 
   OrionAdapter.prototype.getSelection = function () {
-    // var cm = this.cm;
+    // var orion = this.orion;
 
-    // var selectionList = cm.listSelections();
+    // var selectionList = orion.listSelections();
     // var ranges = [];
     // for (var i = 0; i < selectionList.length; i++) {
     //   ranges[i] = new Selection.Range(
-    //     cm.indexFromPos(selectionList[i].anchor),
-    //     cm.indexFromPos(selectionList[i].head)
+    //     orion.indexFromPos(selectionList[i].anchor),
+    //     orion.indexFromPos(selectionList[i].head)
     //   );
     // }
 
@@ -2143,11 +2097,11 @@ ot.OrionAdapter = (function (global) {
     // for (var i = 0; i < selection.ranges.length; i++) {
     //   var range = selection.ranges[i];
     //   ranges[i] = {
-    //     anchor: this.cm.posFromIndex(range.anchor),
-    //     head:   this.cm.posFromIndex(range.head)
+    //     anchor: this.orion.posFromIndex(range.anchor),
+    //     head:   this.orion.posFromIndex(range.head)
     //   };
     // }
-    // this.cm.setSelections(ranges);
+    // this.orion.setSelections(ranges);
   };
 
   var addStyleRule = (function () {
@@ -2164,56 +2118,56 @@ ot.OrionAdapter = (function (global) {
   }());
 
   OrionAdapter.prototype.setOtherCursor = function (position, color, clientId) {
-    var cursorPos = this.cm.posFromIndex(position);
-    var cursorCoords = this.cm.cursorCoords(cursorPos);
-    var cursorEl = document.createElement('span');
-    cursorEl.className = 'other-client';
-    cursorEl.style.display = 'inline-block';
-    cursorEl.style.padding = '0';
-    cursorEl.style.marginLeft = cursorEl.style.marginRight = '-1px';
-    cursorEl.style.borderLeftWidth = '2px';
-    cursorEl.style.borderLeftStyle = 'solid';
-    cursorEl.style.borderLeftColor = color;
-    cursorEl.style.height = (cursorCoords.bottom - cursorCoords.top) * 0.9 + 'px';
-    cursorEl.style.zIndex = 0;
-    cursorEl.setAttribute('data-clientid', clientId);
-    return this.cm.setBookmark(cursorPos, { widget: cursorEl, insertLeft: true });
+    // var cursorPos = this.orion.posFromIndex(position);
+    // var cursorCoords = this.orion.cursorCoords(cursorPos);
+    // var cursorEl = document.createElement('span');
+    // cursorEl.className = 'other-client';
+    // cursorEl.style.display = 'inline-block';
+    // cursorEl.style.padding = '0';
+    // cursorEl.style.marginLeft = cursorEl.style.marginRight = '-1px';
+    // cursorEl.style.borderLeftWidth = '2px';
+    // cursorEl.style.borderLeftStyle = 'solid';
+    // cursorEl.style.borderLeftColor = color;
+    // cursorEl.style.height = (cursorCoords.bottom - cursorCoords.top) * 0.9 + 'px';
+    // cursorEl.style.zIndex = 0;
+    // cursorEl.setAttribute('data-clientid', clientId);
+    // return this.orion.setBookmark(cursorPos, { widget: cursorEl, insertLeft: true });
   };
 
   OrionAdapter.prototype.setOtherSelectionRange = function (range, color, clientId) {
-    var match = /^#([0-9a-fA-F]{6})$/.exec(color);
-    if (!match) { throw new Error("only six-digit hex colors are allowed."); }
-    var selectionClassName = 'selection-' + match[1];
-    var rule = '.' + selectionClassName + ' { background: ' + color + '; }';
-    addStyleRule(rule);
+    // var match = /^#([0-9a-fA-F]{6})$/.exec(color);
+    // if (!match) { throw new Error("only six-digit hex colors are allowed."); }
+    // var selectionClassName = 'selection-' + match[1];
+    // var rule = '.' + selectionClassName + ' { background: ' + color + '; }';
+    // addStyleRule(rule);
 
-    var anchorPos = this.cm.posFromIndex(range.anchor);
-    var headPos   = this.cm.posFromIndex(range.head);
+    // var anchorPos = this.orion.posFromIndex(range.anchor);
+    // var headPos   = this.orion.posFromIndex(range.head);
 
-    return this.cm.markText(
-      minPos(anchorPos, headPos),
-      maxPos(anchorPos, headPos),
-      { className: selectionClassName }
-    );
+    // return this.orion.markText(
+    //   minPos(anchorPos, headPos),
+    //   maxPos(anchorPos, headPos),
+    //   { className: selectionClassName }
+    // );
   };
 
   OrionAdapter.prototype.setOtherSelection = function (selection, color, clientId) {
-    var selectionObjects = [];
-    for (var i = 0; i < selection.ranges.length; i++) {
-      var range = selection.ranges[i];
-      if (range.isEmpty()) {
-        selectionObjects[i] = this.setOtherCursor(range.head, color, clientId);
-      } else {
-        selectionObjects[i] = this.setOtherSelectionRange(range, color, clientId);
-      }
-    }
-    return {
-      clear: function () {
-        for (var i = 0; i < selectionObjects.length; i++) {
-          selectionObjects[i].clear();
-        }
-      }
-    };
+    // var selectionObjects = [];
+    // for (var i = 0; i < selection.ranges.length; i++) {
+    //   var range = selection.ranges[i];
+    //   if (range.isEmpty()) {
+    //     selectionObjects[i] = this.setOtherCursor(range.head, color, clientId);
+    //   } else {
+    //     selectionObjects[i] = this.setOtherSelectionRange(range, color, clientId);
+    //   }
+    // }
+    // return {
+    //   clear: function () {
+    //     for (var i = 0; i < selectionObjects.length; i++) {
+    //       selectionObjects[i].clear();
+    //     }
+    //   }
+    // };
   };
 
   OrionAdapter.prototype.trigger = function (event) {
@@ -2229,11 +2183,13 @@ ot.OrionAdapter = (function (global) {
   };
 
   OrionAdapter.prototype.registerUndo = function (undoFn) {
-    this.cm.undo = undoFn;
+    // this.orion.undo = undoFn;
+    this.orion.setAction("undo", undoFn);
   };
 
   OrionAdapter.prototype.registerRedo = function (redoFn) {
-    this.cm.redo = redoFn;
+    // this.orion.redo = redoFn;
+    this.orion.setAction("redo", redoFn);
   };
 
   // Throws an error if the first argument is falsy. Useful for debugging.
