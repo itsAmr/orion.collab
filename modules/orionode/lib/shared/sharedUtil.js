@@ -121,6 +121,9 @@ module.exports = function(options) {
         .then(function(sharedProjects) {
             function add(lst) {
                 lst.forEach(function(project) {
+                    //update the name of the project to include the original owner's username,
+                    //so that projects with the same name can be differentiated.
+                    project.Name = project.Name + " (" + project.Location.split(path.sep)[2] + "'s workspace)";
                     projects.push(project);
                     if (project.Children) add(project.Children);
                 });
