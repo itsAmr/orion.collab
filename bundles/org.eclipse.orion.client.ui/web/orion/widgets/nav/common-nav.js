@@ -389,6 +389,9 @@ define([
 				commandRegistry.registerCommandContribution(contextMenuActionsScope, commandId, 1, "orion.commonNavContextMenuGroup/orion.relatedActions/orion.Extensions"); //$NON-NLS-0$
 			});
 			
+			//Collaboration Mode
+			commandRegistry.registerCommandContribution(contextMenuActionsScope, "orion.shareProject", 1);
+
 			// Retrieve and register project commands
 			return this.preferences.get("/common-nav").then(function(prefs) { //$NON-NLS-0$
 				var show = prefs["showNewProjectCommands"]; //$NON-NLS-0$
