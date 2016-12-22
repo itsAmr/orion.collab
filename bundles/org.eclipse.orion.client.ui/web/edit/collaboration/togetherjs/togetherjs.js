@@ -75,9 +75,9 @@
     // When undefined, attempts to use the browser's language
     lang: undefined,
     fallbackLang: "en-US",
-    sessionFileUrl: null,
     creatorUsername: null,
-    projectSessionID: null
+    projectSessionID: null,
+    projectLocation: null
   };
 
   var styleSheet = "/togetherjs/togetherjs.css";
@@ -208,7 +208,6 @@
   }
 
   var TogetherJS = window.TogetherJS = function TogetherJS(projectSessionID) {
-    debugger;
     var session;
     if (TogetherJS.running) {
       session = TogetherJS.require("session");

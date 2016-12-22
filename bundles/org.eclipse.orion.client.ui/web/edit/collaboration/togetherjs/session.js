@@ -83,15 +83,15 @@ define(["require", "util", "channels", "jquery", "storage"], function (require, 
 
   session.currentUrl = function () {
     if (includeHashInUrl) {
-      if (location.hash.indexOf('/sharedWorkspace') == 1) {
+      if (location.hash.indexOf('/sharedWorkspace') !== -1) {
         //get everything after 'workspace name'
-        var workspace = 'mo/mourad/OrionContent/'
+        var workspace = '/OrionContent/'
         var index = location.hash.indexOf(workspace);
-        return location.hash.substring(index + workspace.length, location.hash.length);
+        return location.hash.substring(index + workspace.length);
       } else {
         var loc = '/file/';
         var index = location.hash.indexOf(loc);
-        return location.hash.substring(index + loc.length, location.hash.length);
+        return location.hash.substring(index + loc.length);
       }
         // if (location.href == TogetherJS.config.get("sessionFileUrl")) {
         //     var loc = location.href;
