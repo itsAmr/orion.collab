@@ -41,7 +41,7 @@ define(["orion/xhr", 'orion/xsrfUtils', "orion/plugin", "domReady!"], function(x
 					timeout: 15000
 				}).then(function(result) {
 					loginData = result.response ? JSON.parse(result.response) : null;
-					if (loginData.jwt) {
+					if (loginData && loginData.jwt) {
 						localStorage.setItem('orionSocket.authToken', loginData.jwt)
 					}
 					return loginData;

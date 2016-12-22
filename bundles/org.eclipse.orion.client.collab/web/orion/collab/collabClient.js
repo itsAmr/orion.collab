@@ -240,7 +240,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEvent
 		},
 
 		viewUninstalled: function(event) {
-			this.textView.removeEventListener('Selection', this.selectionListener);
+			if (this.textView) this.textView.removeEventListener('Selection', this.selectionListener);
 			this.textView = null;
 			this.docPeers = {};
 			this.myLine = 0;

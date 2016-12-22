@@ -76,7 +76,7 @@ module.exports = function(options) {
 			if (!doc) {
 				return userProject.create(userProjectJSON(username));
 			}
-			return new Promise.resolve(doc);
+			return Promise.resolve(doc);
 		});
 	}
 	
@@ -145,9 +145,15 @@ module.exports = function(options) {
 		project = projectsCollection.getProjectRoot(project);
 
 		projectsCollection.addUserToProject(user, project)
-		.then(addProjectToUser(user, project))
+		.then(function(doc) {
+			return addProjectToUser(user, project);
+		})
 		.then(function(result) {
 			res.end();
+		})
+		.catch(function(err){
+		  // just need one of these
+		  console.log('error:', err);
 		});
 	});
 	

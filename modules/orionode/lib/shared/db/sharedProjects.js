@@ -99,7 +99,11 @@ module.exports = function(options) {
 	function addProject(project) {
 		var hub = generateUniqueHubId();
 		//TODO Also add name of project owner? Replace by projectJSON all over the file.
-		return sharedProject.create({location: project, hubid: hub});
+		var query = sharedProject.findOne({location: project});
+		return query.exec()
+		.then(function(doc) {
+			return doc ? Promise.resolve(doc) : sharedProject.create({location: project, hubid: hub});
+		});
 	}
 
 	/**
@@ -110,11 +114,11 @@ module.exports = function(options) {
 		return sharedProject.findOne({'location': project}).exec()
 		.then(function(doc) {
 			if (doc.users.length > 0) {
-				return userProjectsCollection.removeProjectReferences(doc.users, project);
+				return userProjectsCollection.removeProjectReferences(doc.users, project).exec();
 			}
 		})
 		.then(function() {
-			return sharedProject.remove({location: project});
+			return sharedProject.remove({location: project}).exec();
 		});
 	}
 	
@@ -193,14 +197,25 @@ module.exports = function(options) {
 	 * Adds user to project's user list.
 	 */
 	function addUserToProject(user, project) {
-		return sharedProject.findOne({'location': project}).exec()
+		return addProject(project)
 		.then(function(doc) {
 			if (doc.users.indexOf(user) === -1) {
 				return sharedProject.findOneAndUpdate({'location': project}, {$addToSet: {'users': user} }).exec();
-			} else {
-				//user already there
 			}
 		});
+
+		// return sharedProject.findOne({'location': project}).exec()
+		// .then(function(doc) {
+		// 	if (!doc) {
+		// 		return addProject(project);
+		// 	} else {
+		// 		return Promise.resolve(doc);
+		// 	}
+		// }).then(function(doc) {
+		// 	if (doc.users.indexOf(user) === -1) {
+		// 		return sharedProject.findOneAndUpdate({'location': project}, {$addToSet: {'users': user} }).exec();
+		// 	}
+		// });
 	}
 
 	/**

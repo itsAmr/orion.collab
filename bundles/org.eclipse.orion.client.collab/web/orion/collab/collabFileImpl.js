@@ -64,8 +64,6 @@ define(["orion/xhr", "orion/Deferred", "orion/URL-shim",  "orion/form"], functio
 			throw new Error("Not supported"); //$NON-NLS-0$ 
 		},
 		createFolder: function(parentLocation, folderName) {
-			console.log(parentLocation);
-			console.log(folderName);
 			return xhr("POST", parentLocation, {
 				headers: {
 					"Orion-Version": "1",
