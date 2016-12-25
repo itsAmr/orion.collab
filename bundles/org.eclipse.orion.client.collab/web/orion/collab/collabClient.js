@@ -1,5 +1,5 @@
 /*eslint-env browser, amd */
-define(['orion/editor/eventTarget', 'orion/editor/annotations'], function(mEventTarget, mAnnotations) {
+define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot'], function(mEventTarget, mAnnotations, ot) {
 
 	var AT = mAnnotations.AnnotationType;
 	
