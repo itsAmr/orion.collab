@@ -34,7 +34,7 @@ Server component for loading a user's shared workspace content, for handling fil
     3. Since projects are uniquely identified by their path, if project gets deleted/renamed, cross-reference to database.
 
 ### <a name="cs-section"></a>Client-side collab (OT & shared workspace implementation)
-As the editor loads (orion/ui/editorView.js), the collabClient is initialized ```new collabClient(editor, inputManager, fileClient)```. Once a project is selected, if it is a shared project, the client connects to the websocket with the project's hubID ```new WebSocket("ws://hubserver/hubID")``` and the collabClient starts catching and sending messages.
+As the editor loads (orion/ui/editorView.js), the collabClient is initialized ```new collabClient(editor, inputManager, fileClient)```. Once a project is selected, if it is a shared project, the client connects to the websocket with the project's hubID ```new WebSocket("ws://hubserver/hubID")``` and the collabClient starts catching and sending messages. Once a document is selected and the textView loads, the OT is started.
 
 ```
 collab/web
@@ -47,11 +47,11 @@ collab/web
 │
 └───orion
 │   └───collab
-│		│   shareProjectClient.js
-│   	│   collabFileImpl.js
-│   	│	collabSocket.js
-│   	│	ot.js
-│   	│	collabClient.js
+│		  │	shareProjectClient.js
+│   	  │	collabFileImpl.js
+│   	  │	collabSocket.js
+│   	  │	ot.js
+│   	  │	collabClient.js
 
 ```
 
@@ -67,7 +67,7 @@ collab/web
 - 	***collab/ot.js***: OT logic as well as undo stack overriding. (The included selection logic and clients tracking unused but can be moved from collabClient).
 
 
-- ***collab/collabClient.js***: Main file for client-side collaboration. Takes in the editor and textView and makes things happen like annotations, prevent auto-save/auto-load, tree updates, etc. Handles doc-level messages (operations, selections, acknowledgement, etc).
+- ***collab/collabClient.js***: Main file for client-side collaboration. Takes in the editor and textView and makes things happen like annotations, prevent auto-save/auto-load, tree updates, etc. Handles doc-level messages (operations, selections, acknowledgement, etc), and starts the OT session.
 
 ![Orion shared workspace diagram (client)]()
 
