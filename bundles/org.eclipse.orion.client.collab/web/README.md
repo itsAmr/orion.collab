@@ -1,12 +1,12 @@
 ## Orion Collab
-#
+
 Collab mode includes a few components.
 * [Server-side shared workspace][shared workspace]
 * [Client-side collab (OT & shared workspace)][client side]
 * [WebSocket Server][websocket server]
 * [Authentication (using jwt)][auth]
 
-#### <a name="sw-section"></a>Server-side shared workspace implementation
+### <a name="sw-section"></a>Server-side shared workspace implementation
 Server component for loading a user's shared workspace content, for handling file system operations within the shared workspace and for interacting with the database. The following files are responsible for the work:
 
 - 	***orionode/lib/sharedWorkspace.js***: Entry point for all shared operations.
@@ -26,14 +26,14 @@ Server component for loading a user's shared workspace content, for handling fil
 
 - 	***orionode/lib/shared/sharedDecorator.js***: Decorator that adds the hubID to the file metadata if its a shared project.
 
-![Orion shared workspace diagram (server)]()
+![Orion shared workspace diagram (server)](./img/shared_workspace_server.jpg)
 
 	TODO:
     1. Combine userprojects table with orionaccounts or at least check for user existence on invite.
     2. Better error handling for db queries.
     3. Since projects are uniquely identified by their path, if project gets deleted/renamed, cross-reference to database.
 
-#### <a name="cs-section"></a>Client-side collab (OT & shared workspace implementation)
+### <a name="cs-section"></a>Client-side collab (OT & shared workspace implementation)
 As the editor loads (orion/ui/editorView.js), the collabClient is initialized ```new collabClient(editor, inputManager, fileClient)```. Once a project is selected, if it is a shared project, the client connects to the websocket with the project's hubID ```new WebSocket("ws://hubserver/hubID")``` and the collabClient starts catching and sending messages.
 
 ```
@@ -83,8 +83,9 @@ collab/web
     9. Handle socket failure (prevent non-owner from editing?)
     10. Add trigger to enable/disable shared mode
 
-#### <a name="ws-section"></a>WebSocket Server
+### <a name="ws-section"></a>WebSocket Server
 Clients connect to the server with a session ID that represents the selected project. The WebSocket server has 3 layers and the messages flow in a single direction down the layers:
+
 1. Server (main layer)
 	* Websocket interface (entry point)
 	* Handles new connections
@@ -102,19 +103,19 @@ Clients connect to the server with a session ID that represents the selected pro
 	* Makes use of OT and keeps latest version of file in memory
 	* Deals with doc-specific messages (operation/selection/etc)
 
-![WebSocket example diagram]()
+![WebSocket example diagram](./img/hub_server.jpg)
 
 	TODO: 
     1. Make it easy to switch between WebSocket implementation (i.e. socketIO)
     2. Make generic send message method (related to point number 1)
     3. Give client notice if file load/save fails
 
-#### <a name="auth-section"></a>Authentication
+### <a name="auth-section"></a>Authentication
 A JSON webtoken is generated using a secret and including the username in the payload on user login. The token is saved in the browser local storage and sent to the websocket server upon connection. The websocket server decodes the token and ensures the person is infact an Orion user.
     
 This requires that the Orion server (orion.conf) and WebSocket server (config file) both have the same JWT secret.
 
-![Auth diagram]()
+![Auth diagram](./img/Auth_diagram.png)
 
 	TODO: 
     1. The socket server should send the decoded user to the orion server in order to ensure that the user is allowed to the particular project they are trying to access.
