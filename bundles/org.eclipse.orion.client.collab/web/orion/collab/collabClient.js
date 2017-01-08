@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * @license
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License v1.0
+ * (http://www.eclipse.org/legal/epl-v10.html), and the Eclipse Distribution
+ * License v1.0 (http://www.eclipse.org/org/documents/edl-v10.html).
+ *
+ * Contributors: IBM Corporation - initial API and implementation
+ ******************************************************************************/
+
 /*eslint-env browser, amd */
 define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot'], function(mEventTarget, mAnnotations, ot) {
 
@@ -32,7 +43,6 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 		this.textView = null;
 		var self = this;
 		this.fileClient.addEventListener('Changed', self.sendFileOperation.bind(self));
-		this.selectionListener = this.selectionListener.bind(this);
 		mEventTarget.EventTarget.addMixin(collabSocket);
 		this.editor.addEventListener("ModelLoaded", function(event) {self.viewInstalled.call(self, event);});
 		this.editor.addEventListener("TextViewUninstalled", function(event) {self.viewUninstalled.call(self, event);});
@@ -43,9 +53,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 		this.collabSocket.addEventListener("Closed", self.socketDisconnected.bind(self));
 		this.socket = this.collabSocket.socket;
 		window.addEventListener("hashchange", function() {self.destroyOT.call(self);});
-		this.myLine = 0;
 		this.docPeers = {};
-		this.annotations = {};
 		this.awaitingClients = false;
 		if (this.socket && !this.socket.closed && this.textView) {
 			this.initSocket();
@@ -56,7 +64,6 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 		initSocket: function() {
 			this.inputManager.collabRunning = true;
 			var self = this;
-			this.textView.addEventListener('Selection', self.selectionListener);
 			
 			//Add the necessary functions to the socket so we can run an OT session.
 		  	this.socket.sendOperation = function (revision, operation, selection) {
@@ -106,38 +113,31 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 		            self.awaitingClients = false;
 		            break;
 		          case "client_left":
-		          //   this.trigger('client_left', msg.clientId);
-					self.destroyCollabAnnotations(msg.clientId);
+		            this.trigger('client_left', msg.clientId);
 					delete self.docPeers[msg.clientId];
 		            break;
 		          case "client_joined":
-		          	var obj = {};
-		          	obj[msg.clientId] = msg.client;
-		          	this.trigger('clients', obj);
 					self.docPeers[msg.clientId] = msg.client;
-					self.updateLineAnnotation(msg.clientId, msg.client.selection);
+					this.trigger('client_joined', msg.clientId, self.docPeers[msg.clientId]);
 		          	break;
 		          case "all_clients":
 					self.docPeers = msg.clients;
-					self.initializeLineAnnotations();
+					this.trigger('clients', self.docPeers);
 					self.awaitingClients = false;
 					break;
 		          case "client_update":
+					this.trigger('client_update', msg.clientId, msg.client);
 		          	break;
-		          case "set_name":
-		            //this.trigger('set_name', msg.clientId, msg.name);
-		            break;
 		          case "ack":
 		            this.trigger('ack');
 		            break;
 		          case "operation":
 		            this.trigger('operation', msg.operation);
 					self.editor.markClean();
-		            // this.trigger('selection', msg.clientId, msg.selection);
+		            this.trigger('selection', msg.clientId, msg.selection);
 		            break;
 		          case "selection":
-		            // this.trigger('selection', msg.clientId, msg.selection);
-				    self.updateLineAnnotation(msg.clientId, msg.selection);
+		            this.trigger('selection', msg.clientId, msg.selection);
 		            break;
 		          case "reconnect":
 		            this.trigger('reconnect');
@@ -151,7 +151,7 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 		      'doc': this.currentDoc(),
 		      'clientId': this.socket.clientId
 		    };
-		    this.destroyCollabAnnotations();
+
 		    this.socket.send(msg);
 		},
 
@@ -161,9 +161,8 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 				this.ot = null;
 			}
 			this.textView.getModel().setText(operation[0], 0);
-			this.otOrionAdapter = new ot.OrionAdapter(this.textView);
-			this.ot = new ot.EditorClient(revision, clients, this.socket, this.otOrionAdapter);
-			this.initializeLineAnnotations();
+			this.otOrionAdapter = new ot.OrionAdapter(this.editor, AT);
+			this.ot = new ot.EditorClient(revision, clients, this.socket, this.otOrionAdapter, this.socket.clientId);
 			this.editor.markClean();
 		},
 
@@ -212,103 +211,102 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 			}
 		},
 
-		selectionListener: function(e) {
-			if (!this.socket) return;
-			var currLine = this.editor.getLineAtOffset(e.newValue.start);
-			var lastLine = this.editor.getModel().getLineCount()-1;
-			var lineStartOffset = this.editor.getLineStart(currLine);
-			var offset = e.newValue.start;
+		//Moved to OT.js
+		// selectionListener: function(e) {
+		// 	if (!this.socket) return;
+		// 	var currLine = this.editor.getLineAtOffset(e.newValue.start);
+		// 	var lastLine = this.editor.getModel().getLineCount()-1;
+		// 	var lineStartOffset = this.editor.getLineStart(currLine);
+		// 	var offset = e.newValue.start;
 
-		    if (offset) {
-		        //decide whether or not it is worth sending (if line has changed or needs updating).
-		        if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
-		        //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
-		            if (currLine === lastLine && offset === lineStartOffset) {
-		                currLine -= 1;
-		            }
-		        } else {
-		            return;
-		        }
-			}
+		//     if (offset) {
+		//         //decide whether or not it is worth sending (if line has changed or needs updating).
+		//         if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
+		//         //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
+		//             if (currLine === lastLine && offset === lineStartOffset) {
+		//                 currLine -= 1;
+		//             }
+		//         } else {
+		//             return;
+		//         }
+		// 	}
 
-		    this.myLine = currLine;
+		//     this.myLine = currLine;
 
-		    this.socket.sendSelection(currLine);
-
-		    //update yourself for self-tracking
-		    this.updateLineAnnotation(this.socket.clientId, this.myLine);
-		},
+		//     this.socket.sendSelection(currLine);
+		// },
 
 		viewUninstalled: function(event) {
-			if (this.textView) this.textView.removeEventListener('Selection', this.selectionListener);
 			this.textView = null;
 			this.docPeers = {};
-			this.myLine = 0;
 		},
 
-		initializeLineAnnotations: function() {
-			for (var key in this.docPeers)	{
-				if (!this.docPeers.hasOwnProperty(key)) continue;
-				this.updateLineAnnotation(key, this.docPeers[key].selection);
-			}
-		},
+		//Not used anymore
+		// initializeLineAnnotations: function() {
+		// 	for (var key in this.docPeers)	{
+		// 		if (!this.docPeers.hasOwnProperty(key)) continue;
+		// 		this.updateLineAnnotation(key, this.docPeers[key].selection);
+		// 	}
+		// },
 
-		updateLineAnnotation: function(id, line = 0, name = 'unknown', color = '#000000') {
-			if (this.docPeers[id]) {
-				name = this.docPeers[id].username;
-				color = this.docPeers[id].usercolor;
-			} else {
-				console.log("received selection before client was initialized.");
-				//ask for the clients
-				if (!this.awaitingClients) {
-					this.getDocPeers();
-					this.awaitingClients = true;
-				}
-				return;
-			}
-			var viewModel = this.editor.getModel();
-			var annotationModel = this.editor.getAnnotationModel();
-			var lineStart = this.editor.mapOffset(viewModel.getLineStart(line));
-			if (lineStart === -1) return;
-			var ann = AT.createAnnotation(AT.ANNOTATION_COLLAB_LINE_CHANGED, lineStart, lineStart, name + " is editing");
-			ann.html = ann.html.substring(0, ann.html.indexOf('></div>')) + " style='background-color:" + color + "'><b>" + name.substring(0,2) + "</b></div>";
-			ann.peerId = id;
-			var peerId = id;
+		//Moved to OT.js
+		// updateLineAnnotation: function(id, line = 0, name = 'unknown', color = '#000000') {
+		// 	if (this.docPeers[id]) {
+		// 		name = this.docPeers[id].username;
+		// 		color = this.docPeers[id].usercolor;
+		// 	} else {
+		// 		console.log("received selection before client was initialized.");
+		// 		//ask for the clients
+		// 		if (!this.awaitingClients) {
+		// 			this.getDocPeers();
+		// 			this.awaitingClients = true;
+		// 		}
+		// 		return;
+		// 	}
+		// 	var viewModel = this.editor.getModel();
+		// 	var annotationModel = this.editor.getAnnotationModel();
+		// 	var lineStart = this.editor.mapOffset(viewModel.getLineStart(line));
+		// 	if (lineStart === -1) return;
+		// 	var ann = AT.createAnnotation(AT.ANNOTATION_COLLAB_LINE_CHANGED, lineStart, lineStart, name + " is editing");
+		// 	ann.html = ann.html.substring(0, ann.html.indexOf('></div>')) + " style='background-color:" + color + "'><b>" + name.substring(0,2) + "</b></div>";
+		// 	ann.peerId = id;
+		// 	var peerId = id;
 
-			/*if peer isn't being tracked yet, start tracking
-			* else replace previous annotation
-			*/
-			if (!(peerId in this.annotations && this.annotations[peerId]._annotationModel)) {
-				this.annotations[peerId] = ann;
-				annotationModel.addAnnotation(this.annotations[peerId]);
-			} else {
-				var currAnn = this.annotations[peerId];
-				if (ann.start === currAnn.start) return;
-				annotationModel.replaceAnnotations([currAnn], [ann]);
-				this.annotations[peerId] = ann;
-			}
-		},
+		// 	/*if peer isn't being tracked yet, start tracking
+		// 	* else replace previous annotation
+		// 	*/
+		// 	if (!(peerId in this.annotations && this.annotations[peerId]._annotationModel)) {
+		// 		this.annotations[peerId] = ann;
+		// 		annotationModel.addAnnotation(this.annotations[peerId]);
+		// 	} else {
+		// 		var currAnn = this.annotations[peerId];
+		// 		if (ann.start === currAnn.start) return;
+		// 		annotationModel.replaceAnnotations([currAnn], [ann]);
+		// 		this.annotations[peerId] = ann;
+		// 	}
+		// },
 
-		destroyCollabAnnotations: function(peerId) {
-			var annotationModel = this.editor.getAnnotationModel();
-			var currAnn = null;
+		//Moved to OT.js
+		// destroyCollabAnnotations: function(peerId) {
+		// 	var annotationModel = this.editor.getAnnotationModel();
+		// 	var currAnn = null;
 
-			/*If a peer is specified, just remove their annotation
-			* Else remove all peers' annotations.
-			*/
-			if (peerId) {
-				if (this.annotations[peerId]) {
-					//remove that users annotation
-					currAnn = this.annotations[peerId];
-					annotationModel.removeAnnotation(currAnn);
-					delete this.annotations[peerId];
-				}
-			} else {
-				//the session has ended remove everyone's annotation
-				annotationModel.removeAnnotations(AT.ANNOTATION_COLLAB_LINE_CHANGED);
-				this.annotations = {};
-			}
-		},
+		// 	/*If a peer is specified, just remove their annotation
+		// 	* Else remove all peers' annotations.
+		// 	*/
+		// 	if (peerId) {
+		// 		if (this.annotations[peerId]) {
+		// 			//remove that users annotation
+		// 			currAnn = this.annotations[peerId];
+		// 			annotationModel.removeAnnotation(currAnn);
+		// 			delete this.annotations[peerId];
+		// 		}
+		// 	} else {
+		// 		//the session has ended remove everyone's annotation
+		// 		annotationModel.removeAnnotations(AT.ANNOTATION_COLLAB_LINE_CHANGED);
+		// 		this.annotations = {};
+		// 	}
+		// },
 
 		docInstalled: function(event) {
 			if (this.socket) {
@@ -336,10 +334,6 @@ define(['orion/editor/eventTarget', 'orion/editor/annotations', 'orion/collab/ot
 		socketDisconnected: function() {
 			this.socket = null;
 			this.inputManager.collabRunning = false;
-			if (this.textView) {
-				this.textView.removeEventListener('Selection', this.selectionListener);
-				this.destroyCollabAnnotations();
-			}
 			this.fileClient.removeEventListener('Changed', this._sendFileOperation);
 			this.destroyOT();
 		},

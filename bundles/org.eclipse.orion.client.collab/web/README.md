@@ -74,7 +74,7 @@ collab/web
 	TODO: 
     1. Full UI for invite/share
     2. Rewrite session socket logic currently using Tjs (Socket connection + session management + UI)
-    3. Move selection logic to OT.js for better integration
+    3. [done] Move selection logic to OT.js for better integration
     4. Edit Selection to move along with the Undo stack
     5. Add quick progress screen/bar while connecting/authenticating to socket to give users context
     6. Progress screen while fetching document content

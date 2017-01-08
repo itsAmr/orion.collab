@@ -1625,7 +1625,7 @@ define([], function() {
       } else {
         this.color = color;
       }
-      if (selection) { this.updateSelection(selection); }
+      if (selection > -1) { this.updateSelection(selection); }
     }
 
     OtherClient.prototype.setColor = function (hue) {
@@ -1647,14 +1647,19 @@ define([], function() {
       this.setColor(hueFromName(name));
     };
 
+    OtherClient.prototype.updateClient = function (clientObj) {
+        this.name = this.setName(clientObj.name || this.name);
+        this.color = clientObj.color || this.color;
+    };
+
     OtherClient.prototype.updateSelection = function (selection) {
-      // this.removeSelection();
-      // this.selection = selection;
-      // this.mark = this.editorAdapter.setOtherSelection(
-      //   selection,
-      //   selection.position === selection.selectionEnd ? this.color : this.lightColor,
-      //   this.id
-      // );
+        this.selection = selection;
+        this.mark = this.editorAdapter.setOtherSelection(
+            selection,
+            this.color,
+            this.id,
+            this.name
+        );
     };
 
     OtherClient.prototype.remove = function () {
@@ -1670,12 +1675,12 @@ define([], function() {
     };
 
 
-    function EditorClient (revision, clients, serverAdapter, editorAdapter) {
+    function EditorClient (revision, clients, serverAdapter, editorAdapter, clientId) {
       Client.call(this, revision);
       this.serverAdapter = serverAdapter;
       this.editorAdapter = editorAdapter;
       this.undoManager = new UndoManager();
-
+      this.id = clientId;
       this.initializeClientList();
       this.initializeClients(clients);
 
@@ -1691,16 +1696,18 @@ define([], function() {
 
       this.serverAdapter.registerCallbacks({
         client_left: function (clientId) { self.onClientLeft(clientId); },
-        set_name: function (clientId, name) { self.getClientObject(clientId).setName(name); },
+        client_joined: function (clientId, clientObj) { self.addClient(clientId, clientObj); },
+        client_update: function (clientId, clientObj) { self.getClientObject(clientId).updateClient(clientObj); },
         ack: function () { self.serverAck(); },
         operation: function (operation) {
           self.applyServer(TextOperation.fromJSON(operation));
         },
         selection: function (clientId, selection) {
-          if (selection) {
-            self.getClientObject(clientId).updateSelection(
-              self.transformSelection(Selection.fromJSON(selection))
-            );
+          if (selection > -1) {
+            // self.getClientObject(clientId).updateSelection(
+            //     self.transformSelection(Selection.fromJSON(selection))
+            // );
+            self.getClientObject(clientId).updateSelection(selection);
           } else {
             self.getClientObject(clientId).removeSelection();
           }
@@ -1717,6 +1724,8 @@ define([], function() {
             if (clients.hasOwnProperty(clientId)) {
               var clientObject = self.getClientObject(clientId);
 
+              clients[clientId].name = clients[clientId].username || "unknown";
+              clients[clientId].color = clients[clientId].usercolor || "#000000";
               if (clients[clientId].name) {
                 clientObject.setName(clients[clientId].name);
               }
@@ -1726,10 +1735,11 @@ define([], function() {
               }
 
               var selection = clients[clientId].selection;
-              if (selection) {
-                self.clients[clientId].updateSelection(
-                  self.transformSelection(Selection.fromJSON(selection))
-                );
+              if (selection > -1) {
+                // self.clients[clientId].updateSelection(
+                //     self.transformSelection(Selection.fromJSON(selection))
+                // );
+                self.clients[clientId].updateSelection(selection);
               } else {
                 self.clients[clientId].removeSelection();
               }
@@ -1743,12 +1753,14 @@ define([], function() {
     inherit(EditorClient, Client);
 
     EditorClient.prototype.addClient = function (clientId, clientObj) {
+      clientObj.name = clientObj.username;
+      clientObj.color = clientObj.usercolor;
       this.clients[clientId] = new OtherClient(
         clientId,
         this.clientListEl,
         this.editorAdapter,
         clientObj.name || clientId,
-        clientObj.selection ? Selection.fromJSON(clientObj.selection) : null,
+        clientObj.selection,
         clientObj.color
       );
     };
@@ -1818,13 +1830,16 @@ define([], function() {
     };
 
     EditorClient.prototype.updateSelection = function () {
-      // this.selection = this.editorAdapter.getSelection();
+      this.selection = this.editorAdapter.getSelection();
     };
 
     EditorClient.prototype.onSelectionChange = function () {
       var oldSelection = this.selection;
       this.updateSelection();
-      if (oldSelection && this.selection.equals(oldSelection)) { return; }
+      var name = this.clients[this.id].name;
+      var color = this.clients[this.id].color;
+      //update yourself for self-tracking
+      this.editorAdapter.updateLineAnnotation(this.id, this.selection, name, color);
       this.sendSelection(this.selection);
     };
 
@@ -1907,25 +1922,33 @@ define([], function() {
     var TextOperation = ot.TextOperation;
     var Selection = ot.Selection;
 
-    function OrionAdapter (orion) {
-      this.orion = orion;
+    function OrionAdapter (orion, annotationTypes) {
+      this.editor = orion;
+      this.orion = orion.getTextView();
       this.model = orion.getModel();
       this.ignoreNextChange = false;
       this.changeInProgress = false;
       this.selectionChanged = false;
+      this.myLine = 0;
       this.deleteContent = "";
+      this.AT = annotationTypes;
+      this.annotations = {};
+
+      this.destroyCollabAnnotations();
 
       bind(this, 'onChanging');
       bind(this, 'onChanged');
       bind(this, 'onCursorActivity');
       bind(this, 'onFocus');
       bind(this, 'onBlur');
+      bind(this, 'selectionListener');
 
       this.orion.addEventListener('ModelChanging', this.onChanging);
       this.orion.addEventListener('ModelChanged', this.onChanged);
       this.orion.addEventListener('cursorActivity', this.onCursorActivity);
       this.orion.addEventListener('focus', this.onFocus);
       this.orion.addEventListener('blur', this.onBlur);
+      this.orion.addEventListener('Selection', this.selectionListener)
     }
 
     // Removes all event listeners from the Orion instance.
@@ -1935,6 +1958,7 @@ define([], function() {
       this.orion.removeEventListener('cursorActivity', this.onCursorActivity);
       this.orion.removeEventListener('focus', this.onFocus);
       this.orion.removeEventListener('blur', this.onBlur);
+      this.orion.removeEventListener('Selection', this.selectionListener);
     };
 
     function OrionDocLength (doc) {
@@ -2050,7 +2074,7 @@ define([], function() {
         this.trigger('change', pair[0], pair[1]);
       }
       this.deleteContent = "";
-      // if (this.selectionChanged) { this.trigger('selectionChange'); }
+      if (this.selectionChanged) { this.trigger('selectionChange'); }
       this.changeInProgress = false;
       // this.ignoreNextChange = false;
     };
@@ -2078,18 +2102,7 @@ define([], function() {
     };
 
     OrionAdapter.prototype.getSelection = function () {
-      // var orion = this.orion;
-
-      // var selectionList = orion.listSelections();
-      // var ranges = [];
-      // for (var i = 0; i < selectionList.length; i++) {
-      //   ranges[i] = new Selection.Range(
-      //     orion.indexFromPos(selectionList[i].anchor),
-      //     orion.indexFromPos(selectionList[i].head)
-      //   );
-      // }
-
-      // return new Selection(ranges);
+      return this.myLine;
     };
 
     OrionAdapter.prototype.setSelection = function (selection) {
@@ -2116,6 +2129,33 @@ define([], function() {
         styleSheet.insertRule(css, (styleSheet.cssRules || styleSheet.rules).length);
       };
     }());
+
+    OrionAdapter.prototype.selectionListener = function(e) {
+      var currLine = this.editor.getLineAtOffset(e.newValue.start);
+      var lastLine = this.editor.getModel().getLineCount()-1;
+      var lineStartOffset = this.editor.getLineStart(currLine);
+      var offset = e.newValue.start;
+
+        if (offset) {
+          //decide whether or not it is worth sending (if line has changed or needs updating).
+          if (currLine !== this.myLine || currLine === lastLine || currLine === 0) {
+          //if on last line and nothing written, send lastline-1 to bypass no annotation on empty line.
+              if (currLine === lastLine && offset === lineStartOffset) {
+                  currLine -= 1;
+              }
+          } else {
+              return;
+          }
+      }
+
+      this.myLine = currLine;
+
+      if (this.changeInProgress) {
+        this.selectionChanged = true;
+      } else {
+        this.trigger('selectionChange');
+      }
+    };
 
     OrionAdapter.prototype.setOtherCursor = function (position, color, clientId) {
       // var cursorPos = this.orion.posFromIndex(position);
@@ -2151,23 +2191,59 @@ define([], function() {
       // );
     };
 
-    OrionAdapter.prototype.setOtherSelection = function (selection, color, clientId) {
-      // var selectionObjects = [];
-      // for (var i = 0; i < selection.ranges.length; i++) {
-      //   var range = selection.ranges[i];
-      //   if (range.isEmpty()) {
-      //     selectionObjects[i] = this.setOtherCursor(range.head, color, clientId);
-      //   } else {
-      //     selectionObjects[i] = this.setOtherSelectionRange(range, color, clientId);
-      //   }
-      // }
-      // return {
-      //   clear: function () {
-      //     for (var i = 0; i < selectionObjects.length; i++) {
-      //       selectionObjects[i].clear();
-      //     }
-      //   }
-      // };
+    OrionAdapter.prototype.setOtherSelection = function (selection, color, clientId, name) {
+      this.updateLineAnnotation(clientId, selection, name, color);
+      var self = this;
+      return {
+        clear: function() {
+          self.destroyCollabAnnotations(clientId);
+        }
+      };
+    };
+
+    OrionAdapter.prototype.updateLineAnnotation = function(id, line = 0, name = 'unknown', color = '#000000') {
+      var viewModel = this.editor.getModel();
+      var annotationModel = this.editor.getAnnotationModel();
+      var lineStart = this.editor.mapOffset(viewModel.getLineStart(line));
+      if (lineStart === -1) return;
+      var ann = this.AT.createAnnotation(this.AT.ANNOTATION_COLLAB_LINE_CHANGED, lineStart, lineStart, name + " is editing");
+      ann.html = ann.html.substring(0, ann.html.indexOf('></div>')) + " style='background-color:" + color + "'><b>" + name.substring(0,2) + "</b></div>";
+      ann.peerId = id;
+      var peerId = id;
+
+      /*if peer isn't being tracked yet, start tracking
+      * else replace previous annotation
+      */
+      if (!(peerId in this.annotations && this.annotations[peerId]._annotationModel)) {
+        this.annotations[peerId] = ann;
+        annotationModel.addAnnotation(this.annotations[peerId]);
+      } else {
+        var currAnn = this.annotations[peerId];
+        if (ann.start === currAnn.start) return;
+        annotationModel.replaceAnnotations([currAnn], [ann]);
+        this.annotations[peerId] = ann;
+      }
+    };
+
+    OrionAdapter.prototype.destroyCollabAnnotations = function(peerId) {
+      var annotationModel = this.editor.getAnnotationModel();
+      var currAnn = null;
+
+      /*If a peer is specified, just remove their annotation
+      * Else remove all peers' annotations.
+      */
+      if (peerId) {
+        if (this.annotations[peerId]) {
+          //remove that users annotation
+          currAnn = this.annotations[peerId];
+          annotationModel.removeAnnotation(currAnn);
+          delete this.annotations[peerId];
+        }
+      } else {
+        //the session has ended remove everyone's annotation
+        annotationModel.removeAnnotations(this.AT.ANNOTATION_COLLAB_LINE_CHANGED);
+        this.annotations = {};
+      }
     };
 
     OrionAdapter.prototype.trigger = function (event) {
